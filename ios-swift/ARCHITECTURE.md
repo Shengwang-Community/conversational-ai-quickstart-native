@@ -11,7 +11,7 @@ ios-swift/
 │   ├── AppDelegate.swift              # App entry
 │   ├── SceneDelegate.swift            # Scene lifecycle
 │   ├── KeyCenter.swift                # Credentials and provider config
-│   ├── AgentViewController.swift      # Main controller (connection flow, UI switching)
+│   ├── ViewController.swift            # Main controller (connection flow, UI switching)
 │   ├── AppColors.swift                # Color palette (dark theme)
 │   ├── Chat/
 │   │   ├── ConfigBackgroundView.swift # Config page (Start button)
@@ -40,7 +40,7 @@ ios-swift/
 ### KeyCenter
 Stores all user-configurable credentials (APP_ID, API keys, voice IDs). Equivalent to `.env` file.
 
-### AgentViewController
+### ViewController
 Single-page controller managing two views: `ConfigBackgroundView` (pre-connection) and `ChatBackgroundView` (in-call). Orchestrates the connection sequence: token generation → RTM login → RTC join → agent start.
 
 ### AgentManager
@@ -50,7 +50,7 @@ Wraps Agora Conversational AI REST API. Handles `start` and `stop` calls with To
 Generic HTTP client. Also provides `generateToken()` which calls an external token service to produce RTC+RTM tokens from APP_ID + APP_CERTIFICATE.
 
 ### ConversationalAIAPI
-Parses RTM messages from the Agora server into typed Swift callbacks: `onTranscriptUpdated`, `onAgentStateChanged`, `onAgentMetrics`, `onAgentError`, etc. AgentViewController implements these callbacks to update UI.
+Parses RTM messages from the Agora server into typed Swift callbacks: `onTranscriptUpdated`, `onAgentStateChanged`, `onAgentMetrics`, `onAgentError`, etc. ViewController implements these callbacks to update UI.
 
 ### Chat Views
 - `ConfigBackgroundView` — Start button, shown before connection
@@ -62,7 +62,7 @@ Centralized dark theme color palette. All UI components reference colors from he
 
 ## State Management
 
-AgentViewController holds all state as instance properties:
+ViewController holds all state as instance properties:
 
 | Property | Type | Lifecycle |
 |----------|------|-----------|

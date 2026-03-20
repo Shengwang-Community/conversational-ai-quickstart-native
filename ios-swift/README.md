@@ -28,7 +28,6 @@
 - Agora 开发者账号 [Console](https://console.shengwang.cn/)
 - 已在 Agora 控制台开通 **实时消息 RTM** 功能（必需）
 - 已创建 Agora 项目并获取 App ID 和 App Certificate
-- 已创建 Conversational AI Pipeline 并获取 Pipeline ID [AI Studio](https://console-conversationai.shengwang.cn/product/ConversationAI/studio)
 
 ## 快速开始
 
@@ -53,52 +52,64 @@ pod install
 
    ```swift
    class KeyCenter {
+       // Agora Configuration
        static let AG_APP_ID: String = "your_app_id"
        static let AG_APP_CERTIFICATE: String = "your_app_certificate"
 
        // LLM - DeepSeek
        static let LLM_API_KEY: String = "your_deepseek_api_key"
+       static let LLM_URL: String = "https://api.deepseek.com/v1/chat/completions"
+       static let LLM_MODEL: String = "deepseek-chat"
 
-       // TTS - ElevenLabs
-       static let TTS_ELEVENLABS_API_KEY: String = "your_elevenlabs_api_key"
-       static let TTS_ELEVENLABS_VOICE_ID: String = "pNInz6obpgDQGcFmaJgB"
-       static let TTS_ELEVENLABS_MODEL_ID: String = "eleven_turbo_v2"
+       // STT - Microsoft Azure
+       static let STT_MICROSOFT_KEY: String = "your_microsoft_key"
+       static let STT_MICROSOFT_REGION: String = "eastasia"
+
+       // TTS - MiniMax
+       static let TTS_MINIMAX_KEY: String = "your_minimax_key"
+       static let TTS_MINIMAX_MODEL: String = "speech-02-turbo"
+       static let TTS_MINIMAX_VOICE_ID: String = "female-shaonv"
+       static let TTS_MINIMAX_GROUP_ID: String = "your_minimax_group_id"
    }
    ```
 
    **配置项说明**：
    - `AG_APP_ID`：你的 Agora App ID（必需）
    - `AG_APP_CERTIFICATE`：你的 App Certificate（必需，用于 Token 生成和 REST API 鉴权）
-   - `LLM_API_KEY`：DeepSeek LLM API Key（必需）
-   - `TTS_ELEVENLABS_API_KEY`：ElevenLabs TTS API Key（必需）
-   - `TTS_ELEVENLABS_VOICE_ID`：ElevenLabs 声音 ID（可选，已有默认值）
-   - `TTS_ELEVENLABS_MODEL_ID`：ElevenLabs 模型 ID（可选，已有默认值）
+   - `LLM_API_KEY`：DeepSeek API Key（必需）
+   - `LLM_URL`：LLM 接口地址（支持任何 OpenAI 兼容 API）
+   - `LLM_MODEL`：LLM 模型名称
+   - `STT_MICROSOFT_KEY`：Microsoft Azure 语音服务 Key（必需）
+   - `STT_MICROSOFT_REGION`：Azure 区域
+   - `TTS_MINIMAX_KEY`：MiniMax API Key（必需）
+   - `TTS_MINIMAX_MODEL`：MiniMax TTS 模型
+   - `TTS_MINIMAX_VOICE_ID`：MiniMax 声音 ID
+   - `TTS_MINIMAX_GROUP_ID`：MiniMax Group ID（必需）
 
    **获取方式**：
    - 体验声网对话式 AI 引擎前，你需要先在声网控制台创建项目并开通对话式 AI 引擎服务，获取 App ID 和 App Certificate。[开通服务](https://doc.shengwang.cn/doc/convoai/restful/get-started/enable-service)
    - DeepSeek API Key：在 [DeepSeek Platform](https://platform.deepseek.com/) 中获取
-   - ElevenLabs API Key：在 [ElevenLabs](https://elevenlabs.io/) 中获取
+   - Microsoft Azure Key：在 [Azure Portal](https://portal.azure.cn/) 中获取
+   - MiniMax API Key：在 [MiniMax Platform](https://platform.minimaxi.com/) 中获取
 
    **运行应用程序**
-   - 输入channelName，点击Start即可体验功能。
+   - 点击 Start 即可体验功能。
 
    **注意**：
    - 当前Demo**仅用于快速体验和开发测试**，**不推荐用于生产环境**，真实业务场景中，**不应该**直接在前端请求 Agora RESTful API，而应该通过自己的业务后台服务器中转。
-   - **REST Key 和 REST Secret 必须放在服务端**，绝对不能暴露在客户端代码中
+   - **API Key 等敏感信息应放在服务端**，不应暴露在客户端代码中
    - 客户端只请求自己的业务后台接口，业务后台再调用 Agora RESTful API
-   - 业务后台负责保管和管理 REST Key、REST Secret 等敏感信息
 
 ## 测试验证
 
 ### 快速体验流程
 
-1. **配置页面**（`AgentViewController` 中的 `ConfigBackgroundView`）：
+1. **配置页面**（`ViewController` 中的 `ConfigBackgroundView`）：
    - 运行应用，进入配置页面
-   - 输入频道名称（channelName）
-   - 点击"Start"按钮
+   - 点击"Start"按钮（频道名称自动生成）
    - 自动切换到聊天页面
 
-2. **聊天页面**（`AgentViewController` 中的 `ChatBackgroundView`）：
+2. **聊天页面**（`ViewController` 中的 `ChatBackgroundView`）：
    - 自动生成用户token
    - 自动启动RTM
    - 自动启动RTC
@@ -129,7 +140,7 @@ ios-swift/
 │   ├── AppDelegate.swift              # 应用入口
 │   ├── SceneDelegate.swift            # Scene 代理
 │   ├── KeyCenter.swift                # 配置中心（需要填写）
-│   ├── AgentViewController.swift      # 主视图控制器（包含配置和聊天功能）
+│   ├── ViewController.swift      # 主视图控制器（包含配置和聊天功能）
 │   ├── Chat/                          # 聊天相关 UI
 │   │   ├── ConfigBackgroundView.swift # 配置页面视图（频道名称输入、启动按钮）
 │   │   ├── ChatBackgroundView.swift   # 聊天页面视图（转录列表、状态、控制按钮）

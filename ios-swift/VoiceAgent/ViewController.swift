@@ -10,7 +10,7 @@ import SnapKit
 import AgoraRtcKit
 import AgoraRtmKit
 
-class AgentViewController: UIViewController {
+class ViewController: UIViewController {
     // MARK: - UI Components
     private let configBackgroundView = ConfigBackgroundView()
     private let chatBackgroundView = ChatBackgroundView()
@@ -514,7 +514,7 @@ class AgentViewController: UIViewController {
 }
 
 // MARK: - UITableViewDataSource & Delegate
-extension AgentViewController: UITableViewDataSource, UITableViewDelegate {
+extension ViewController: UITableViewDataSource, UITableViewDelegate {
     func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
         return transcripts.count
     }
@@ -531,7 +531,7 @@ extension AgentViewController: UITableViewDataSource, UITableViewDelegate {
 }
 
 // MARK: - AgoraRtcEngineDelegate
-extension AgentViewController: AgoraRtcEngineDelegate {
+extension ViewController: AgoraRtcEngineDelegate {
     func rtcEngine(_ engine: AgoraRtcEngineKit, didJoinChannel channel: String, withUid uid: UInt, elapsed: Int) {
         print("[RTC Call Back] didJoinChannel: \(channel), uid: \(uid)")
         addDebugMessage("onJoinChannelSuccess")
@@ -553,7 +553,7 @@ extension AgentViewController: AgoraRtcEngineDelegate {
 }
 
 // MARK: - AgoraRtmClientDelegate
-extension AgentViewController: AgoraRtmClientDelegate {
+extension ViewController: AgoraRtmClientDelegate {
     func rtmKit(_ rtmKit: AgoraRtmClientKit, didReceiveLinkStateEvent event: AgoraRtmLinkStateEvent) {
         print("<<< [rtmKit:didReceiveLinkStateEvent]")
         switch event.currentState {
@@ -570,7 +570,7 @@ extension AgentViewController: AgoraRtmClientDelegate {
 }
 
 // MARK: - ConversationalAIAPIEventHandler
-extension AgentViewController: ConversationalAIAPIEventHandler {
+extension ViewController: ConversationalAIAPIEventHandler {
     func onAgentVoiceprintStateChanged(agentUserId: String, event: VoiceprintStateChangeEvent) {
         print("onAgentVoiceprintStateChanged: \(event)")
     }

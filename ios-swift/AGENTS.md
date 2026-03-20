@@ -1,5 +1,23 @@
 # iOS Voice Agent - AI Assistant Guide
 
+## Starter Project
+
+If you don't have an existing iOS project, use `temp-project/` as a starting point. It provides:
+
+- Xcode project with `VoiceAgent` target pre-configured
+- `Podfile` with Agora RTC SDK 4.5.1 and Agora RTM SDK
+- `Info.plist` with `NSAllowsArbitraryLoads` (network permission) pre-configured
+- `AppDelegate.swift`, `SceneDelegate.swift`, `ViewController.swift` (empty entry points)
+
+To use it:
+```bash
+cd ios-swift/temp-project
+pod install
+open VoiceAgent.xcworkspace
+```
+
+Then add your code starting from `ViewController.swift`.
+
 ## Build and Run
 
 ```bash
@@ -11,7 +29,7 @@ open VoiceAgent.xcworkspace
 
 ## Configuration
 
-All credentials are in `VoiceAgent/KeyCenter.swift`. Provider details (vendor, URL, model) are configured there and referenced in `AgentViewController.startAgent()`.
+All credentials are in `VoiceAgent/KeyCenter.swift`. Provider details (vendor, URL, model) are configured there and referenced in `ViewController.startAgent()`.
 
 ### Agora Credentials (required)
 
@@ -48,7 +66,7 @@ static let TTS_MINIMAX_GROUP_ID: String = "your_minimax_group_id"
 
 ### Switching Providers
 
-Modify `KeyCenter.swift` fields and the corresponding dictionary in `AgentViewController.startAgent()`. Only API keys and user-configurable IDs go in KeyCenter; vendor names are hardcoded in code.
+Modify `KeyCenter.swift` fields and the corresponding dictionary in `ViewController.startAgent()`. Only API keys and user-configurable IDs go in KeyCenter; vendor names are hardcoded in code.
 
 Supported STT vendors: `microsoft`, `deepgram`, `ares` (built-in, no key needed)
 
