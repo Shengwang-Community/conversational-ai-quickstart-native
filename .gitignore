@@ -1,0 +1,269 @@
+# ============================================
+# General / OS
+# ============================================
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+.AppleDouble
+.LSOverride
+.DocumentRevisions-V100
+.fseventsd
+.TemporaryItems
+.VolumeIcon.icns
+.com.apple.timemachine.donotpresent
+.AppleDB
+.AppleDesktop
+.apdisk
+ehthumbs.db
+Thumbs.db
+*.swp
+*.swo
+*~
+*.tmp
+*.temp
+*.log
+*.backup
+*.bak
+*.orig
+
+# ============================================
+# IDE & Editor
+# ============================================
+.idea/
+**/.idea/
+.vscode/
+**/.vs/
+*.sublime-project
+*.sublime-workspace
+*.code-workspace
+.kiro/
+
+# ============================================
+# iOS / Xcode
+# ============================================
+# Xcode user data
+**/xcuserdata/
+**/*.xcuserstate
+**/*.xcuserdatad
+**/*.xcscheme
+**/xcschememanagement.plist
+
+# Xcode build files
+**/build/
+**/DerivedData/
+**/*.xccheckout
+**/*.xcscmblueprint
+**/*.moved-aside
+**/*.pbxuser
+**/*.mode1v3
+**/*.mode2v3
+**/*.perspectivev3
+**/*.hmap
+**/.xcode.env.local
+
+# Xcode playgrounds
+**/timeline.xctimeline
+**/playground.xcworkspace
+
+# CocoaPods
+**/Pods/
+**/Podfile.lock
+**/.symlinks/
+**/profile
+**/*.xcworkspace
+!**/*.xcworkspace/contents.xcworkspacedata
+
+# Carthage
+**/Carthage/Build/
+
+# Swift Package Manager
+**/.build/
+**/Packages/
+**/*.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/
+**/.swiftpm/
+
+# App packaging
+**/*.ipa
+**/*.dSYM.zip
+**/*.dSYM
+**/*.app
+**/*.framework
+**/*.dylib
+
+# Code Injection
+**/iOSInjectionProject/
+
+# fastlane
+**/fastlane/report.xml
+**/fastlane/Preview.html
+**/fastlane/screenshots/**/*.png
+**/fastlane/test_output
+
+# ============================================
+# Android
+# ============================================
+# Gradle
+**/.gradle/
+**/local.properties
+**/gradle-app.setting
+**/!gradle-wrapper.jar
+**/.gradletasknamecache
+
+# Android Studio
+**/*.iml
+**/.idea_modules/
+
+# Android NDK / Kotlin
+**/.cxx/
+**/.kotlin/
+
+# Android signing
+**/*.keystore
+!**/debug.keystore
+
+# ============================================
+# Flutter / Dart
+# ============================================
+**/.dart_tool/
+**/.flutter-plugins-dependencies
+**/.pub-cache/
+**/.pub/
+**/.metadata
+**/doc/api/
+**/ios/Flutter/.last_build_id
+**/app.*.symbols
+**/app.*.map.json
+
+# ============================================
+# HarmonyOS
+# ============================================
+**/oh_modules/
+**/.hvigor/
+**/.hvigor-wrapper/
+**/oh-package-lock.json5
+**/oh-package.json5
+!**/oh-package.json5.example
+**/.clangd
+**/.clang-format
+**/.clang-tidy
+**/.appanalyzer
+**/.test
+
+# ============================================
+# Python
+# ============================================
+**/venv/
+**/ENV/
+**/.venv
+**/__pycache__/
+**/*.py[cod]
+**/*$py.class
+**/*.so
+**/.Python
+**/pip-log.txt
+**/pip-delete-this-directory.txt
+
+# ============================================
+# Windows / Visual Studio / C++
+# ============================================
+**/[Bb]in/
+**/[Oo]bj/
+**/[Ll]og/
+**/[Ll]ogs/
+**/[Dd]ebug/
+**/[Rr]elease/
+**/[Rr]eleases/
+**/x64/
+**/x86/
+**/bld/
+**/*.suo
+**/*.user
+**/*.userosscache
+**/*.sln.docstates
+**/*.userprefs
+**/*.pidb
+**/*.booproj
+**/*.svd
+**/*.pdb
+**/*.opendb
+**/*.opensdf
+**/*.sdf
+**/*.cachefile
+**/*.VC.db
+**/*.VC.VC.opendb
+**/vcpkg_installed/
+
+# ============================================
+# Node.js / Web / React Native
+# ============================================
+**/node_modules/
+**/yarn.lock
+**/package-lock.json
+**/.bundle/
+**/vendor/bundle/
+**/.expo/
+**/.expo-shared/
+**/dist/
+**/dist-ssr/
+**/npm-debug.log*
+**/yarn-debug.log*
+**/yarn-error.log*
+**/pnpm-debug.log*
+**/lerna-debug.log*
+**/.metro-health-check*
+**/coverage/
+**/.watchmanconfig
+**/*.jsbundle
+
+# Yarn
+**/.yarn/*
+!**/.yarn/patches
+!**/.yarn/plugins
+!**/.yarn/releases
+!**/.yarn/sdks
+!**/.yarn/versions
+
+# ============================================
+# Sensitive / Environment Configuration
+# ============================================
+**/.env
+**/.env.local
+**/.env.*.local
+**/.env.production
+**/env.json
+**/env.properties
+!**/env.example.properties
+!**/env.example.json
+!**/.env.example
+
+# API Keys / Credentials (project-specific)
+**/KeyCenter.swift
+!**/KeyCenter.swift.example
+**/KeyCenterConfig.ts
+**/KeyCenterConfig.js
+**/KeyCenterConfig.ets
+
+# ============================================
+# SpecStory / AI Tools
+# ============================================
+.specstory/
+.specstory
+.cursorindexingignore
+
+# ============================================
+# Archives
+# ============================================
+**/*.zip
+**/*.tar.gz
+**/*.rar
+**/*.7z
+
+# ============================================
+# Temporary & Cache
+# ============================================
+**/.cache/
+**/.temp/
+**/tmp/
+**/*.cache
