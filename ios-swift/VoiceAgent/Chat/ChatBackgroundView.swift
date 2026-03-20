@@ -37,58 +37,65 @@ class ChatBackgroundView: UIView {
         tableView.register(TranscriptCell.self, forCellReuseIdentifier: "TranscriptCell")
         addSubview(tableView)
 
-        // Status View
-        addSubview(statusView)
-
-        // Control Bar
+        // Control Bar — horizontal strip at bottom
         controlBarView.backgroundColor = AppColors.bgControlBar
         controlBarView.layer.cornerRadius = 12
         controlBarView.layer.borderWidth = 0.5
         controlBarView.layer.borderColor = AppColors.borderDefault.cgColor
         addSubview(controlBarView)
 
-        // Mic Button
+        // Agent status (left side of control bar)
+        controlBarView.addSubview(statusView)
+
+        // Mic Button (right side)
         micButton.setImage(UIImage(systemName: "mic.fill")?.withRenderingMode(.alwaysTemplate), for: .normal)
         micButton.tintColor = AppColors.micNormalIcon
         micButton.backgroundColor = AppColors.micNormalBg
         micButton.layer.cornerRadius = 22
         controlBarView.addSubview(micButton)
 
-        // End Call Button
-        endCallButton.setImage(UIImage(systemName: "phone.down.fill")?.withRenderingMode(.alwaysTemplate), for: .normal)
-        endCallButton.tintColor = .white
+        // Stop Button — wide pill shape
+        endCallButton.setTitle("Stop Agent", for: .normal)
+        endCallButton.setTitleColor(.white, for: .normal)
+        endCallButton.titleLabel?.font = .systemFont(ofSize: 14, weight: .medium)
         endCallButton.backgroundColor = AppColors.btnStopBg
-        endCallButton.layer.cornerRadius = 22
+        endCallButton.layer.cornerRadius = 8
+        endCallButton.contentEdgeInsets = UIEdgeInsets(top: 0, left: 16, bottom: 0, right: 16)
         controlBarView.addSubview(endCallButton)
     }
 
     private func setupConstraints() {
-        tableView.snp.makeConstraints { make in
-            make.top.left.right.equalToSuperview()
-            make.bottom.equalTo(statusView.snp.top).offset(-8)
-        }
-
-        statusView.snp.makeConstraints { make in
-            make.left.right.equalToSuperview().inset(20)
-            make.bottom.equalTo(controlBarView.snp.top).offset(-16)
-            make.height.equalTo(36)
-        }
-
+        // Control bar at bottom
         controlBarView.snp.makeConstraints { make in
             make.left.right.equalToSuperview().inset(20)
             make.bottom.equalTo(safeAreaLayoutGuide).offset(-20)
             make.height.equalTo(60)
         }
 
-        micButton.snp.makeConstraints { make in
+        // Agent status — left side of control bar
+        statusView.snp.makeConstraints { make in
+            make.left.equalToSuperview().offset(16)
             make.centerY.equalToSuperview()
-            make.right.equalTo(endCallButton.snp.left).offset(-24)
+        }
+
+        // Stop button — right side
+        endCallButton.snp.makeConstraints { make in
+            make.right.equalToSuperview().offset(-12)
+            make.centerY.equalToSuperview()
+            make.height.equalTo(36)
+        }
+
+        // Mic button — left of stop button
+        micButton.snp.makeConstraints { make in
+            make.right.equalTo(endCallButton.snp.left).offset(-12)
+            make.centerY.equalToSuperview()
             make.width.height.equalTo(44)
         }
 
-        endCallButton.snp.makeConstraints { make in
-            make.center.equalToSuperview()
-            make.width.height.equalTo(44)
+        // TableView fills the space above control bar
+        tableView.snp.makeConstraints { make in
+            make.top.left.right.equalToSuperview()
+            make.bottom.equalTo(controlBarView.snp.top).offset(-12)
         }
     }
 
@@ -104,6 +111,7 @@ class ChatBackgroundView: UIView {
         statusView.updateState(state)
     }
 }
+
 
 // MARK: - TranscriptCell
 class TranscriptCell: UITableViewCell {
@@ -192,12 +200,8 @@ class TranscriptCell: UITableViewCell {
         let smallCorner: CGFloat = 2
         let bigCorner: CGFloat = 16
         if isAgent {
-            bubbleView.layer.maskedCorners = [.layerMinXMinYCorner, .layerMaxXMinYCorner, .layerMinXMaxYCorner, .layerMaxXMaxYCorner]
-            bubbleView.layer.cornerRadius = bigCorner
-            // Use mask for the small top-left corner
             applyBubbleCorners(topLeft: smallCorner, topRight: bigCorner, bottomLeft: bigCorner, bottomRight: bigCorner)
         } else {
-            bubbleView.layer.cornerRadius = bigCorner
             applyBubbleCorners(topLeft: bigCorner, topRight: smallCorner, bottomLeft: bigCorner, bottomRight: bigCorner)
         }
 
@@ -217,8 +221,6 @@ class TranscriptCell: UITableViewCell {
 
     private func applyBubbleCorners(topLeft: CGFloat, topRight: CGFloat, bottomLeft: CGFloat, bottomRight: CGFloat) {
         let path = UIBezierPath()
-        // We apply this in layoutSubviews would be ideal, but for simplicity use a fixed approach
-        // The layer.cornerRadius is set to 16 as default, we override with a mask
         bubbleView.layoutIfNeeded()
         let bounds = bubbleView.bounds.isEmpty ? CGRect(x: 0, y: 0, width: 200, height: 40) : bubbleView.bounds
 
@@ -240,7 +242,6 @@ class TranscriptCell: UITableViewCell {
 
     override func layoutSubviews() {
         super.layoutSubviews()
-        // Re-apply bubble corners after layout
         if let text = avatarLabel.text {
             let isAgent = text == "AI"
             let smallCorner: CGFloat = 2

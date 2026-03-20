@@ -39,9 +39,9 @@ class ConfigBackgroundView: UIView {
 
     private func setupConstraints() {
         startButton.snp.makeConstraints { make in
-            make.center.equalToSuperview()
-            make.width.equalTo(250)
-            make.height.equalTo(50)
+            make.left.right.equalToSuperview().inset(20)
+            make.bottom.equalTo(safeAreaLayoutGuide).offset(-20)
+            make.height.equalTo(48)
         }
     }
 
