@@ -31,11 +31,19 @@ class ChatBackgroundView: UIView {
     private func setupUI() {
         backgroundColor = .clear
 
-        // TableView
+        // TableView — card appearance (rounded corners, border, background)
         tableView.separatorStyle = .none
-        tableView.backgroundColor = .clear
+        tableView.backgroundColor = AppColors.bgCard
+        tableView.layer.cornerRadius = 12
+        tableView.layer.borderWidth = 0.5
+        tableView.layer.borderColor = AppColors.borderDefault.cgColor
+        tableView.clipsToBounds = true
         tableView.register(TranscriptCell.self, forCellReuseIdentifier: "TranscriptCell")
         addSubview(tableView)
+
+        // Agent status — between tableView and control bar (matches Android layout)
+        statusView.isHidden = true
+        addSubview(statusView)
 
         // Control Bar — horizontal strip at bottom
         controlBarView.backgroundColor = AppColors.bgControlBar
@@ -43,9 +51,6 @@ class ChatBackgroundView: UIView {
         controlBarView.layer.borderWidth = 0.5
         controlBarView.layer.borderColor = AppColors.borderDefault.cgColor
         addSubview(controlBarView)
-
-        // Agent status (left side of control bar)
-        controlBarView.addSubview(statusView)
 
         // Mic Button (right side)
         micButton.setImage(UIImage(systemName: "mic.fill")?.withRenderingMode(.alwaysTemplate), for: .normal)
@@ -72,13 +77,7 @@ class ChatBackgroundView: UIView {
             make.height.equalTo(60)
         }
 
-        // Agent status — left side of control bar
-        statusView.snp.makeConstraints { make in
-            make.left.equalToSuperview().offset(16)
-            make.centerY.equalToSuperview()
-        }
-
-        // Stop button — right side
+        // Stop button — right side of control bar
         endCallButton.snp.makeConstraints { make in
             make.right.equalToSuperview().offset(-12)
             make.centerY.equalToSuperview()
@@ -92,10 +91,18 @@ class ChatBackgroundView: UIView {
             make.width.height.equalTo(44)
         }
 
-        // TableView fills the space above control bar
+        // Agent status — between tableView and control bar
+        statusView.snp.makeConstraints { make in
+            make.left.right.equalToSuperview().inset(20)
+            make.bottom.equalTo(controlBarView.snp.top).offset(-8)
+            make.height.equalTo(40)
+        }
+
+        // TableView fills the space above status view
         tableView.snp.makeConstraints { make in
-            make.top.left.right.equalToSuperview()
-            make.bottom.equalTo(controlBarView.snp.top).offset(-12)
+            make.top.equalToSuperview()
+            make.left.right.equalToSuperview().inset(20)
+            make.bottom.equalTo(statusView.snp.top).offset(-8)
         }
     }
 
