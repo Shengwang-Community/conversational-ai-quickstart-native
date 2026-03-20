@@ -11,7 +11,7 @@ open VoiceAgent.xcworkspace
 
 ## Configuration
 
-All credentials are in `VoiceAgent/KeyCenter.swift`. Provider details (vendor, URL, model) are hardcoded in `AgentViewController.startAgent()`.
+All credentials are in `VoiceAgent/KeyCenter.swift`. Provider details (vendor, URL, model) are configured there and referenced in `AgentViewController.startAgent()`.
 
 ### Agora Credentials (required)
 
@@ -20,61 +20,36 @@ static let AG_APP_ID: String = "your_app_id"
 static let AG_APP_CERTIFICATE: String = "your_app_certificate"
 ```
 
-### LLM
+### LLM — DeepSeek
 
-KeyCenter:
 ```swift
 static let LLM_API_KEY: String = "your_api_key"
+static let LLM_URL: String = "https://api.deepseek.com/v1/chat/completions"
+static let LLM_MODEL: String = "deepseek-chat"
 ```
 
-Switch provider by modifying the `llm` dictionary in `startAgent()`:
+Any OpenAI-compatible API works — just change URL and model.
 
-| Provider | url | model |
-|----------|-----|-------|
-| OpenAI | `https://api.openai.com/v1/chat/completions` | `gpt-4o-mini` |
-| DeepSeek | `https://api.deepseek.com/v1/chat/completions` | `deepseek-chat` |
-
-Any OpenAI-compatible API works — just change url and model.
-
-### ASR
-
-Currently uses Agora built-in `ares` (no API key needed). To switch to Deepgram, add key to KeyCenter and modify `asr` in `startAgent()`:
+### STT — Microsoft Azure
 
 ```swift
-// ares (no key)
-"asr": ["language": "en-US", "vendor": "ares"]
-
-// Deepgram
-"asr": ["language": "en-US", "vendor": "deepgram", "params": ["key": KeyCenter.ASR_DEEPGRAM_API_KEY]]
+static let STT_MICROSOFT_KEY: String = "your_microsoft_key"
+static let STT_MICROSOFT_REGION: String = "chinaeast2"
 ```
 
-### TTS
-
-KeyCenter:
-```swift
-static let TTS_ELEVENLABS_API_KEY: String = "your_key"
-static let TTS_ELEVENLABS_VOICE_ID: String = "pNInz6obpgDQGcFmaJgB"
-static let TTS_ELEVENLABS_MODEL_ID: String = "eleven_turbo_v2"
-```
-
-Supported vendors (modify `tts` in `startAgent()`):
-
-| vendor | Required params |
-|--------|----------------|
-| `elevenlabs` | key, voice_id, model_id |
-| `microsoft` | key, voice |
-| `openai` | api_key, voice, model |
-| `minimax` | key, voice_id, model |
-| `cartesia` | api_key, voice_id, model_id |
-
-### Adding a New Provider
-
-Only API keys and user-configurable IDs go in KeyCenter. Hardcode vendor/URL/model in code.
+### TTS — MiniMax
 
 ```swift
-// KeyCenter.swift
-static let NEW_PROVIDER_API_KEY: String = ""
-
-// AgentViewController.startAgent()
-"module": ["vendor": "name", "params": ["key": KeyCenter.NEW_PROVIDER_API_KEY]]
+static let TTS_MINIMAX_KEY: String = "your_minimax_key"
+static let TTS_MINIMAX_MODEL: String = "speech-01-turbo"
+static let TTS_MINIMAX_VOICE_ID: String = "male-qn-qingse"
+static let TTS_MINIMAX_GROUP_ID: String = "your_minimax_group_id"
 ```
+
+### Switching Providers
+
+Modify `KeyCenter.swift` fields and the corresponding dictionary in `AgentViewController.startAgent()`. Only API keys and user-configurable IDs go in KeyCenter; vendor names are hardcoded in code.
+
+Supported STT vendors: `microsoft`, `deepgram`, `ares` (built-in, no key needed)
+
+Supported TTS vendors: `minimax`, `elevenlabs`, `microsoft`, `openai`, `cartesia`

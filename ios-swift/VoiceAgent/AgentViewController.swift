@@ -336,7 +336,7 @@ class AgentViewController: UIViewController {
                 "properties": [
                     "channel": channel,
                     "agent_rtc_uid": "\(agentUid)",
-                    "remote_rtc_uids": ["\(uid)"],
+                    "remote_rtc_uids": ["*"],
                     "token": agentToken,
                     "enable_string_uid": true,
                     "idle_timeout": 120,
@@ -344,11 +344,15 @@ class AgentViewController: UIViewController {
                         "enable_rtm": true
                     ],
                     "asr": [
-                        "language": "en-US",
-                        "vendor": "ares"
+                        "language": "zh-CN",
+                        "vendor": "microsoft",
+                        "params": [
+                            "key": KeyCenter.STT_MICROSOFT_KEY,
+                            "region": KeyCenter.STT_MICROSOFT_REGION
+                        ]
                     ],
                     "llm": [
-                        "url": "https://api.deepseek.com/v1/chat/completions",
+                        "url": KeyCenter.LLM_URL,
                         "api_key": KeyCenter.LLM_API_KEY,
                         "system_messages": [
                             ["role": "system", "content": "You are a helpful AI assistant."]
@@ -356,19 +360,24 @@ class AgentViewController: UIViewController {
                         "greeting_message": "Hello! I am your AI assistant. How can I help you?",
                         "failure_message": "I'm sorry, I'm having trouble processing your request.",
                         "params": [
-                            "model": "deepseek-chat"
+                            "model": KeyCenter.LLM_MODEL
                         ]
                     ],
                     "tts": [
-                        "vendor": "elevenlabs",
+                        "vendor": "minimax",
                         "params": [
-                            "key": KeyCenter.TTS_ELEVENLABS_API_KEY,
-                            "voice_id": KeyCenter.TTS_ELEVENLABS_VOICE_ID,
-                            "model_id": KeyCenter.TTS_ELEVENLABS_MODEL_ID
+                            "key": KeyCenter.TTS_MINIMAX_KEY,
+                            "model": KeyCenter.TTS_MINIMAX_MODEL,
+                            "voice_setting": [
+                                "voice_id": KeyCenter.TTS_MINIMAX_VOICE_ID,
+                                "speed": 1.0
+                            ],
+                            "group_id": KeyCenter.TTS_MINIMAX_GROUP_ID
                         ]
                     ],
                     "parameters": [
-                        "data_channel": "rtm"
+                        "data_channel": "rtm",
+                        "enable_error_message": true
                     ]
                 ] as [String: Any]
             ]
