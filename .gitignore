@@ -238,13 +238,6 @@ Thumbs.db
 !**/env.example.json
 !**/.env.example
 
-# API Keys / Credentials (project-specific)
-**/KeyCenter.swift
-!**/KeyCenter.swift.example
-**/KeyCenterConfig.ts
-**/KeyCenterConfig.js
-**/KeyCenterConfig.ets
-
 # ============================================
 # SpecStory / AI Tools
 # ============================================
