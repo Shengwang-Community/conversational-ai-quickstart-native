@@ -36,8 +36,11 @@ import io.agora.rtm.RtmClient
 import io.agora.rtm.RtmConfig
 import io.agora.rtm.RtmConstants
 import io.agora.rtm.RtmEventListener
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
@@ -100,6 +103,10 @@ class AgentChatViewModel : ViewModel() {
     // Debug log list - for displaying logs in UI
     private val _debugLogList = MutableStateFlow<List<String>>(emptyList())
     val debugLogList: StateFlow<List<String>> = _debugLogList.asStateFlow()
+
+    // Message error events (one-shot, not state)
+    private val _messageError = MutableSharedFlow<MessageError>(extraBufferCapacity = 1)
+    val messageError: SharedFlow<MessageError> = _messageError.asSharedFlow()
 
     private var unifiedToken: String? = null
 
@@ -237,7 +244,8 @@ class AgentChatViewModel : ViewModel() {
         }
 
         override fun onMessageError(agentUserId: String, error: MessageError) {
-            // Handle message error
+            addStatusLog("Message error: type=${error.chatMessageType.value}, code=${error.code}, msg=${error.message}")
+            _messageError.tryEmit(error)
         }
 
         override fun onTranscriptUpdated(agentUserId: String, transcript: Transcript) {

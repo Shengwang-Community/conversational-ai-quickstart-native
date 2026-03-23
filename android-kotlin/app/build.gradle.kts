@@ -16,7 +16,6 @@ if (envPropertiesFile.exists()) {
 // Validate required ShengWang configuration properties
 val requiredProperties = listOf(
     "APP_ID",
-    "APP_CERTIFICATE",
     "LLM_API_KEY",
     "LLM_URL",
     "LLM_MODEL",
@@ -112,8 +111,8 @@ dependencies {
     implementation(libs.retrofit)
     implementation(libs.converter.gson)
     implementation(libs.gson)
-    implementation(libs.agora.rtc)
-    implementation(libs.agora.rtm)
+    implementation(libs.shengwang.rtc.full)
+    implementation(libs.shengwang.rtm.lite)
     
     // Kotlin Coroutines
     implementation(libs.kotlinx.coroutines.android)

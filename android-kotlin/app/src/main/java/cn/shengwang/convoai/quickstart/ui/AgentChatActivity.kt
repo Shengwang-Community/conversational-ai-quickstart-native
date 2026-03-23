@@ -58,6 +58,9 @@ class AgentChatActivity : BaseActivity<ActivityAgentChatBinding>() {
 
         // Observe debug log changes
         observeDebugLogs()
+
+        // Observe message errors
+        observeMessageErrors()
     }
 
     override fun initView() {
@@ -318,6 +321,18 @@ class AgentChatActivity : BaseActivity<ActivityAgentChatBinding>() {
                         scrollView?.fullScroll(View.FOCUS_DOWN)
                     }
                 }
+            }
+        }
+    }
+
+    private fun observeMessageErrors() {
+        lifecycleScope.launch {
+            viewModel.messageError.collect { error ->
+                Toast.makeText(
+                    this@AgentChatActivity,
+                    "Message error [${error.chatMessageType.value}]: ${error.message} (code: ${error.code})",
+                    Toast.LENGTH_LONG
+                ).show()
             }
         }
     }
