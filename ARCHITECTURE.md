@@ -1,4 +1,4 @@
-# ARCHITECTURE.md
+# Conversational AI Quickstart Native — Architecture
 
 ## Repo Layout
 

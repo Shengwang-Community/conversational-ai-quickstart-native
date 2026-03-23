@@ -1,4 +1,4 @@
-# iOS Swift Agent Starter
+# Conversational AI Quickstart — iOS Swift
 
 ## 功能概述
 
@@ -34,8 +34,8 @@
 1. **克隆项目**：
 
 ```bash
-git clone https://github.com/alienzh/Agora-AI-Recipes-Starter.git
-cd Agora-AI-Recipes-Starter/ios-swift
+git clone https://github.com/AgoraIO-Community/conversational-ai-quickstart-native.git
+cd conversational-ai-quickstart-native/ios-swift
 ```
 
 2. **安装 CocoaPods 依赖**：

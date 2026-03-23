@@ -1,4 +1,4 @@
-# Android Agent Starter
+# Conversational AI Quickstart — Android Kotlin
 
 ## 功能概述
 
@@ -34,8 +34,8 @@
 
 1. **克隆项目**：
 ```bash
-git clone git@github.com:Shengwang-Community/conversational-ai-quickstart.git
-cd conversational-ai-quickstart/android-kotlin
+git clone https://github.com/AgoraIO-Community/conversational-ai-quickstart-native.git
+cd conversational-ai-quickstart-native/android-kotlin
 ```
 
 2. **配置 Android 项目**：

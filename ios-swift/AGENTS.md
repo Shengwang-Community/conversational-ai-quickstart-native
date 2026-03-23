@@ -1,4 +1,4 @@
-# iOS Voice Agent - AI Assistant Guide
+# Conversational AI Quickstart iOS — AI Assistant Guide
 
 ## Starter Project
 

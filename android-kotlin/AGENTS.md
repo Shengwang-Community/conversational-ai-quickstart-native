@@ -1,4 +1,4 @@
-# AGENTS.md — Android Kotlin
+# Conversational AI Quickstart Android — AI Assistant Guide
 
 ## Conversation Modes
 
@@ -10,7 +10,7 @@
 
 ## Project Overview
 
-ShengWang Conversational AI Android Demo — real-time voice conversation Android client.
+Conversational AI Quickstart — Android real-time voice conversation client.
 
 The client directly calls ShengWang RESTful API to start/stop Agent, with STT (Speech-to-Text), LLM (Large Language Model), and TTS (Text-to-Speech) configuration in the request body, authenticated via `agora token`.
 
@@ -212,7 +212,6 @@ When exceeding 10 conversation turns or large code changes:
 
 | Document | Description |
 |----------|-------------|
-| AGENTS.md | This document — AI Agent development guidelines and project constraints |
-| ARCHITECTURE.md | Technical architecture details |
+| AGENTS.md | AI Agent development guidelines and project constraints |
+| ARCHITECTURE.md | This document — technical architecture details |
 | README.md | Quick start and usage guide |
-| `.doc/` | Internal reference docs (design specs, Pipeline architecture, Token flow, etc.) |

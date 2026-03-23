@@ -1,4 +1,4 @@
-# ARCHITECTURE.md — Android Kotlin
+# Architecture — Conversational AI Quickstart Android
 
 ## Architecture Overview
 
@@ -355,4 +355,3 @@ See the "Configuration Fields" section in `AGENTS.md` for the full list.
 | AGENTS.md | AI Agent development guidelines and project constraints |
 | ARCHITECTURE.md | This document — technical architecture details |
 | README.md | Quick start and usage guide |
-| `.doc/` | Internal reference docs |

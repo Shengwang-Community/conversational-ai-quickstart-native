@@ -1,4 +1,4 @@
-# Architecture — iOS Voice Agent
+# Architecture — Conversational AI Quickstart iOS
 
 ## Project Structure
 
