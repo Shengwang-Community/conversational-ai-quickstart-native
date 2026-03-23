@@ -5,8 +5,6 @@
 ```
 ios-swift/
 ├── Podfile                            # CocoaPods dependencies
-├── AgoraRtm.podspec                   # RTM local podspec
-├── RTMLibs/                           # RTM SDK xcframework (local)
 ├── VoiceAgent/
 │   ├── AppDelegate.swift              # App entry
 │   ├── SceneDelegate.swift            # Scene lifecycle
@@ -32,7 +30,7 @@ ios-swift/
 | Dependency | Version | Purpose |
 |------------|---------|---------|
 | AgoraRtcEngine_iOS | 4.5.1 | Real-time audio |
-| AgoraRtm | local | Real-time messaging (transcript, state sync) |
+| AgoraRtm/RtmKit | 2.2.6 | Real-time messaging (lite version, no aosl conflict) |
 | SnapKit | latest | Auto Layout DSL |
 
 ## Module Responsibilities

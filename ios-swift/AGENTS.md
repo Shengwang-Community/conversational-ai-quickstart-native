@@ -23,6 +23,10 @@ The demo calls two backend services directly from the client:
 
 To point to your own backend: modify the URL strings in `AgentManager.swift` and `NetworkManager.swift`. If your backend handles auth differently, also update `AgentManager.generateHeader()`.
 
+If using a local server, the host must be the IP address of the machine running the server (e.g., `http://192.168.1.100:8000`), not `localhost` or `127.0.0.1`. The iOS device and the server must be on the same local network.
+
+⚠️ Security warning: This demo embeds all API keys (LLM, STT, TTS) directly in the client-side request body for quick demonstration and debugging. This exposes keys to anyone who inspects network traffic. For production use, you should set up an intermediate backend server that holds the sensitive keys and proxies the agent start/stop requests — the client should never carry provider API keys directly.
+
 ## How to Switch AI Providers
 
 The STT/LLM/TTS vendor configuration lives in two places that must be changed together:
