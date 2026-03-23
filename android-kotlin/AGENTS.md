@@ -8,6 +8,29 @@
 | continue | "Continue/resume", or unfinished PROJECT_STATE.md exists | Read state file, restore context |
 | general | Technical questions, code explanations, general inquiries | Direct answer, no workflow |
 
+## How to Use This Project
+
+This is a complete, runnable Android demo for real-time voice conversation with an AI agent.
+
+- If you don't have an existing project, use this project directly. Modify it based on user requirements.
+- If you already have a project, refer to the key parts of this project (connection flow, UI structure, ConversationalAIAPI integration) and adapt them into the existing codebase.
+
+## How to Switch AI Providers
+
+The STT/LLM/TTS vendor configuration lives in two places that must be changed together:
+
+1. `KeyCenter.kt` (reads from `env.properties` via BuildConfig) — API keys and user-configurable IDs
+2. `AgentStarter.kt` → `buildJsonPayload()` — the JSON builder that specifies vendor names and maps KeyCenter values into the request body
+
+To switch a provider:
+- Change the `"vendor"` value in `buildJsonPayload()` (e.g., `"microsoft"` → `"deepgram"` for STT)
+- Update the `"params"` sub-object to match the new vendor's required fields
+- Add/update the corresponding values in `env.properties` (which flow through BuildConfig → KeyCenter)
+
+Supported vendors for STT/TTS/LLM change over time. Refer to the [创建对话式智能体 API 文档](https://doc.shengwang.cn/doc/convoai/restful/convoai/operations/start-agent) for the up-to-date list of supported vendors and their required parameters.
+
+LLM: Any OpenAI-compatible API — change `LLM_URL` and `LLM_MODEL` in `env.properties`.
+
 ## Project Overview
 
 Conversational AI Quickstart — Android real-time voice conversation client.
@@ -26,7 +49,7 @@ The client directly calls ShengWang RESTful API to start/stop Agent, with STT (S
 | State Management | ViewModel + StateFlow |
 | Networking | OkHttp |
 | RTC SDK | ShengWang RTC SDK for Android (`io.agora.rtc:full-sdk:4.5.1`) |
-| RTM SDK | ShengWang RTM SDK for Android (`io.agora:agora-rtm:2.2.3`) |
+| RTM SDK | ShengWang RTM SDK for Android (`io.agora:agora-rtm-lite:2.2.6`) |
 | Coroutines | Kotlin Coroutines |
 | Navigation | Navigation Component (SafeArgs) |
 | ConversationalAIAPI | Built-in, do not modify |
@@ -155,6 +178,21 @@ User Action → ViewModel → ShengWang SDK (RTC/RTM)
 5. Call `AgentStarter.startAgentAsync()` to start Agent
 6. ConversationalAIAPI receives Agent events via RTM → update StateFlow → UI responds
 7. User taps Stop → unsubscribeMessage → `AgentStarter.stopAgentAsync()` → leave RTC → clean up state
+
+## How to Change Request Parameters
+
+The agent start request body is built in `AgentStarter.kt` → `buildJsonPayload()` as a nested `JSONObject`. Key sections:
+
+| Section | What it controls | Where in the JSON |
+|---------|-----------------|-------------------|
+| `asr` | Speech-to-text vendor, language, credentials | `properties.asr` |
+| `llm` | LLM endpoint, model, system prompt, greeting/failure messages | `properties.llm` |
+| `tts` | Text-to-speech vendor, voice, speed | `properties.tts` |
+| `parameters` | Data channel (`rtm`), error message toggle | `properties.parameters` |
+| `advanced_features` | RTM enable flag | `properties.advanced_features` |
+| Top-level | Channel name, agent UID, idle timeout, token | `properties.*` |
+
+To modify request parameters: edit `buildJsonPayload()` in `AgentStarter.kt`. Static values (API keys, model names) should stay in `KeyCenter.kt`; structural changes (adding fields, changing nesting) go directly in the JSON builder.
 
 ## Key Constraints
 
