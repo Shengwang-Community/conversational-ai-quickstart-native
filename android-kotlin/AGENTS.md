@@ -35,7 +35,7 @@ LLM: Any OpenAI-compatible API — change `LLM_URL` and `LLM_MODEL` in `env.prop
 
 Conversational AI Quickstart — Android real-time voice conversation client.
 
-The client directly calls ShengWang RESTful API to start/stop Agent, with STT (Speech-to-Text), LLM (Large Language Model), and TTS (Text-to-Speech) configuration in the request body, authenticated via `agora token`.
+The client directly calls ShengWang RESTful API to start/stop Agent, with STT (Speech-to-Text), LLM (Large Language Model), and TTS (Text-to-Speech) configuration in the request body, authenticated via HTTP token (`Authorization: agora token=<token>`). This auth mode requires APP_CERTIFICATE to be enabled.
 
 ## Tech Stack
 
@@ -47,12 +47,12 @@ The client directly calls ShengWang RESTful API to start/stop Agent, with STT (S
 | Target SDK | API 36 |
 | Build Tool | Gradle (Kotlin DSL) |
 | State Management | ViewModel + StateFlow |
-| Networking | OkHttp |
-| RTC SDK | ShengWang RTC SDK for Android (`io.agora.rtc:full-sdk:4.5.1`) |
-| RTM SDK | ShengWang RTM SDK for Android (`io.agora:agora-rtm-lite:2.2.6`) |
-| Coroutines | Kotlin Coroutines |
-| Navigation | Navigation Component (SafeArgs) |
-| ConversationalAIAPI | Built-in, do not modify |
+| Networking | OkHttp 5.0.0-alpha.14 |
+| RTC SDK | ShengWang RTC SDK (`io.agora.rtc:full-sdk:4.5.1`) |
+| RTM SDK | ShengWang RTM SDK (`io.agora:agora-rtm-lite:2.2.6`) |
+| Coroutines | Kotlin Coroutines 1.9.0 |
+| Navigation | Navigation Component 2.8.2 (SafeArgs) |
+| ConversationalAIAPI | Built-in module, do not modify |
 
 ## Project Structure
 
@@ -110,7 +110,15 @@ app/src/main/java/
   - Advanced features: `enable_rtm: true`, `data_channel: "rtm"`, `enable_string_uid: true`, `idle_timeout: 120`
   - Remote UIDs: `remote_rtc_uids: ["*"]`
 - `stopAgentAsync()`: POST `/agents/{agentId}/leave`
-- Authentication: `Authorization: agora token=<authToken>`
+- Authentication: `Authorization: agora token=<authToken>` (requires APP_CERTIFICATE enabled)
+
+### TokenGenerator (Demo Only)
+
+- Generates RTC/RTM tokens via demo service at `https://service.apprtc.cn/toolbox/v2/token/generate`
+- Sends `appId`, `appCertificate`, `channelName`, `uid`, `types` (1=RTC, 2=RTM) in POST body
+- Returns a unified token usable for both RTC and RTM
+- **Requires APP_CERTIFICATE**: the demo token service needs `appCertificate` to generate valid tokens
+- ⚠️ Demo only — production must use your own backend for token generation
 
 ### ConversationalAIAPI
 
@@ -128,36 +136,116 @@ app/src/main/java/
 - Message sending: `chat(agentUserId, TextMessage/ImageMessage)` + `interrupt(agentUserId)`
 - Audio settings: `loadAudioSettings(AUDIO_SCENARIO_AI_CLIENT)` (must be called before joinChannel)
 
-## Configuration Fields (env.properties)
+## Configuration
 
-| Field | Description | Required |
-|-------|-------------|----------|
-| `APP_ID` | ShengWang App ID | ✅ |
-| `APP_CERTIFICATE` | ShengWang App Certificate | ✅ |
-| `LLM_API_KEY` | LLM API Key | ✅ |
-| `LLM_URL` | LLM endpoint URL (default: DeepSeek) | ✅ |
-| `LLM_MODEL` | LLM model name (default: deepseek-chat) | ✅ |
-| `STT_MICROSOFT_KEY` | Microsoft Azure STT Key | ✅ |
-| `STT_MICROSOFT_REGION` | Azure region (default: chinaeast2) | |
-| `TTS_MINIMAX_KEY` | MiniMax TTS Key | ✅ |
-| `TTS_MINIMAX_MODEL` | TTS model (default: speech-01-turbo) | |
-| `TTS_MINIMAX_VOICE_ID` | Voice ID (default: male-qn-qingse) | |
-| `TTS_MINIMAX_GROUP_ID` | MiniMax Group ID | ✅ |
+### Configuration Flow
+
+```
+env.properties → Gradle buildConfigField → BuildConfig → KeyCenter → AgentStarter / TokenGenerator
+```
+
+Gradle validates all required properties at build time. If any are missing or empty, the build fails with a clear error message listing the missing fields.
+
+### Configuration Fields (env.properties)
+
+| Field | Description | Required | Default |
+|-------|-------------|----------|---------|
+| `APP_ID` | ShengWang App ID | ✅ | — |
+| `APP_CERTIFICATE` | ShengWang App Certificate (must be enabled) | ✅ | — |
+| `LLM_API_KEY` | LLM API Key (e.g. DeepSeek) | ✅ | — |
+| `LLM_URL` | LLM endpoint URL | ✅ | `https://api.deepseek.com/v1/chat/completions` |
+| `LLM_MODEL` | LLM model name | ✅ | `deepseek-chat` |
+| `STT_MICROSOFT_KEY` | Microsoft Azure STT Key | ✅ | — |
+| `STT_MICROSOFT_REGION` | Azure region | | `chinaeast2` |
+| `TTS_MINIMAX_KEY` | MiniMax TTS Key | ✅ | — |
+| `TTS_MINIMAX_MODEL` | TTS model | | `speech-01-turbo` |
+| `TTS_MINIMAX_VOICE_ID` | Voice ID | | `male-qn-qingse` |
+| `TTS_MINIMAX_GROUP_ID` | MiniMax Group ID | ✅ | — |
+
+### APP_CERTIFICATE Must Be Enabled
+
+This project uses HTTP token auth (`Authorization: agora token=<token>`) for REST API calls, and the demo `TokenGenerator` sends `appCertificate` to the token service. Both require the App Certificate to be enabled. If `APP_CERTIFICATE` is empty or the certificate is not enabled in the ShengWang console, token generation and REST API calls will fail.
+
+Make sure to:
+1. Enable the primary certificate for your App ID in the [ShengWang Console](https://console.shengwang.cn/)
+2. Fill in the certificate value in `env.properties` under `APP_CERTIFICATE`
+
+### Build-Time Validation
+
+`build.gradle.kts` validates the following properties are non-empty at build time:
+`APP_ID`, `APP_CERTIFICATE`, `LLM_API_KEY`, `LLM_URL`, `LLM_MODEL`, `STT_MICROSOFT_KEY`, `TTS_MINIMAX_KEY`, `TTS_MINIMAX_GROUP_ID`
+
+If any are missing, the build fails with a message listing the missing properties.
 
 ## API Endpoints
 
 Client directly calls ShengWang REST API (Demo mode):
 
-| Endpoint | Method | Description |
-|----------|--------|-------------|
-| `api.agora.io/cn/api/conversational-ai-agent/v2/projects/{appId}/join/` | POST | Start Agent |
-| `api.agora.io/cn/api/conversational-ai-agent/v2/projects/{appId}/agents/{agentId}/leave` | POST | Stop Agent |
+| Endpoint | Method | Auth Header | Description |
+|----------|--------|-------------|-------------|
+| `api.agora.io/cn/api/conversational-ai-agent/v2/projects/{appId}/join/` | POST | `Authorization: agora token=<authToken>` | Start Agent |
+| `api.agora.io/cn/api/conversational-ai-agent/v2/projects/{appId}/agents/{agentId}/leave` | POST | `Authorization: agora token=<authToken>` | Stop Agent |
 
 Token generated via Demo service (must be replaced with your own backend in production):
 
 | Endpoint | Method | Description |
 |----------|--------|-------------|
-| `service.apprtc.cn/toolbox/v2/token/generate` | POST | Generate RTC/RTM Token |
+| `service.apprtc.cn/toolbox/v2/token/generate` | POST | Generate RTC/RTM Token (requires appId + appCertificate) |
+
+### Start Agent Request Body Structure
+
+```json
+{
+  "name": "<channelName>",
+  "properties": {
+    "channel": "<channelName>",
+    "token": "<agentToken>",
+    "agent_rtc_uid": "<agentRtcUid>",
+    "remote_rtc_uids": ["*"],
+    "enable_string_uid": true,
+    "idle_timeout": 120,
+    "advanced_features": { "enable_rtm": true },
+    "asr": {
+      "vendor": "microsoft",
+      "language": "zh-CN",
+      "params": { "key": "<STT_MICROSOFT_KEY>", "region": "<STT_MICROSOFT_REGION>" }
+    },
+    "llm": {
+      "url": "<LLM_URL>",
+      "api_key": "<LLM_API_KEY>",
+      "system_messages": [{ "role": "system", "content": "You are a helpful AI assistant." }],
+      "greeting_message": "Hello! I am your AI assistant. How can I help you?",
+      "failure_message": "I'm sorry, I'm having trouble processing your request.",
+      "params": { "model": "<LLM_MODEL>" }
+    },
+    "tts": {
+      "vendor": "minimax",
+      "params": {
+        "key": "<TTS_MINIMAX_KEY>",
+        "model": "<TTS_MINIMAX_MODEL>",
+        "voice_setting": { "voice_id": "<TTS_MINIMAX_VOICE_ID>", "speed": 1.0 },
+        "group_id": "<TTS_MINIMAX_GROUP_ID>"
+      }
+    },
+    "parameters": { "data_channel": "rtm", "enable_error_message": true }
+  }
+}
+```
+
+### Token Generation Request Body
+
+```json
+{
+  "appId": "<APP_ID>",
+  "appCertificate": "<APP_CERTIFICATE>",
+  "channelName": "<channelName>",
+  "uid": "<uid>",
+  "types": [1, 2],
+  "expire": 86400,
+  "src": "Android",
+  "ts": "<timestamp>"
+}
+```
 
 ## Data Flow
 
@@ -172,12 +260,12 @@ User Action → ViewModel → ShengWang SDK (RTC/RTM)
 ## Event Flow
 
 1. User taps Start Agent → check microphone permission
-2. Generate userToken (unified for RTC+RTM, channelName is empty)
-3. Parallel: join RTC channel + login RTM
-4. Both ready → subscribeMessage → generate agentToken + authToken
-5. Call `AgentStarter.startAgentAsync()` to start Agent
+2. Generate userToken (unified for RTC+RTM, channelName is empty string, uid=userId)
+3. Parallel: join RTC channel + login RTM (both use the same userToken)
+4. Both ready → subscribeMessage(channelName) → generate agentToken + authToken (uid=agentUid, channelName=current channel)
+5. Call `AgentStarter.startAgentAsync(channelName, agentRtcUid, agentToken, authToken)` to start Agent
 6. ConversationalAIAPI receives Agent events via RTM → update StateFlow → UI responds
-7. User taps Stop → unsubscribeMessage → `AgentStarter.stopAgentAsync()` → leave RTC → clean up state
+7. User taps Stop → unsubscribeMessage → `AgentStarter.stopAgentAsync(agentId, authToken)` → leave RTC → clean up state
 
 ## How to Change Request Parameters
 
@@ -196,13 +284,14 @@ To modify request parameters: edit `buildJsonPayload()` in `AgentStarter.kt`. St
 
 ## Key Constraints
 
-1. **Demo Mode**: Config injected via `env.properties` → BuildConfig, client directly calls REST API
-2. **Production**: Sensitive info (appCertificate, LLM/STT/TTS keys) must be on backend; client only fetches Token and starts Agent through backend
-3. **Token Generation**: `TokenGenerator.kt` is Demo-only; production must use your own server
-4. **Resource Cleanup**: RTC/RTM resources fully released in `hangup()` and `onCleared()`; ConversationalAIAPI released via `destroy()`
-5. **Permissions**: Requires `RECORD_AUDIO` and `INTERNET` permissions
-6. **ConversationalAIAPI is read-only**: All files under `convoaiApi/` are standalone components — **do not modify directly**. To use in other projects, copy the entire `convoaiApi/` directory. See `convoaiApi/README.md` for usage
-7. **Audio Settings**: `loadAudioSettings()` must be called before `joinChannel()`; Avatar mode uses `AUDIO_SCENARIO_DEFAULT`
+1. **APP_CERTIFICATE required**: This project uses HTTP token auth for REST API and token generation. APP_CERTIFICATE must be enabled in the ShengWang console and configured in `env.properties`. Build will fail if it's empty.
+2. **Demo Mode**: Config injected via `env.properties` → BuildConfig, client directly calls REST API
+3. **Production**: Sensitive info (appCertificate, LLM/STT/TTS keys) must be on backend; client only fetches Token and starts Agent through backend
+4. **Token Generation**: `TokenGenerator.kt` is Demo-only; production must use your own server
+5. **Resource Cleanup**: RTC/RTM resources fully released in `hangup()` and `onCleared()`; ConversationalAIAPI released via `destroy()`
+6. **Permissions**: Requires `RECORD_AUDIO` and `INTERNET` permissions
+7. **ConversationalAIAPI is read-only**: All files under `convoaiApi/` are standalone components — **do not modify directly**. To use in other projects, copy the entire `convoaiApi/` directory. See `convoaiApi/README.md` for usage
+8. **Audio Settings**: `loadAudioSettings()` must be called before `joinChannel()`; Avatar mode uses `AUDIO_SCENARIO_DEFAULT`
 
 ## Installed Skills
 
@@ -251,5 +340,5 @@ When exceeding 10 conversation turns or large code changes:
 | Document | Description |
 |----------|-------------|
 | AGENTS.md | AI Agent development guidelines and project constraints |
-| ARCHITECTURE.md | This document — technical architecture details |
-| README.md | Quick start and usage guide |
+| ARCHITECTURE.md | Technical architecture details (data flows, threading, lifecycle) |
+| README.md | Quick start and usage guide (Chinese) |

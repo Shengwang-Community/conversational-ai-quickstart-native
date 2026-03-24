@@ -505,7 +505,7 @@ class AgentChatViewModel : ViewModel() {
                 }
             )
 
-            // Generate auth token for REST API (app-credentials mode)
+            // Generate auth token for REST API (requires APP_CERTIFICATE)
             val authTokenResult = TokenGenerator.generateTokensAsync(
                 channelName = channelName,
                 uid = agentUid.toString()

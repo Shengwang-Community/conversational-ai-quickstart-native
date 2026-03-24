@@ -14,8 +14,12 @@ if (envPropertiesFile.exists()) {
 }
 
 // Validate required ShengWang configuration properties
+// APP_CERTIFICATE is required because this project uses HTTP token auth
+// ("Authorization: agora token=<token>") for REST API calls, which requires
+// the App Certificate to be enabled in the ShengWang console.
 val requiredProperties = listOf(
     "APP_ID",
+    "APP_CERTIFICATE",
     "LLM_API_KEY",
     "LLM_URL",
     "LLM_MODEL",

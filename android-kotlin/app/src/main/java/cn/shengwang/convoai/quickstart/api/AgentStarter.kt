@@ -15,7 +15,8 @@ import org.json.JSONObject
  * Agent Starter
  *
  * Starts/stops Conversational AI agents via Shengwang REST API.
- * Uses app-credentials auth mode: Authorization header is "agora token=<convoai_token>"
+ * Uses HTTP token auth mode: Authorization header is "agora token=<convoai_token>".
+ * This auth mode requires APP_CERTIFICATE to be enabled in the ShengWang console.
  * Pipeline (STT/LLM/TTS) is configured inline in the request body.
  */
 object AgentStarter {
@@ -34,7 +35,7 @@ object AgentStarter {
      * @param channelName Channel name for the agent
      * @param agentRtcUid Agent RTC UID (optional, defaults to "1009527")
      * @param agentToken Token for the agent to join the RTC channel
-     * @param authToken ConvoAI token for REST API authorization (app-credentials mode)
+     * @param authToken Agora token for REST API authorization (requires APP_CERTIFICATE enabled)
      * @return Result containing agentId or exception
      */
     suspend fun startAgentAsync(
@@ -163,7 +164,7 @@ object AgentStarter {
      * Stop an agent
      *
      * @param agentId Agent ID to stop
-     * @param authToken ConvoAI token for REST API authorization
+     * @param authToken Agora token for REST API authorization (requires APP_CERTIFICATE enabled)
      * @return Result containing success or exception
      */
     suspend fun stopAgentAsync(
