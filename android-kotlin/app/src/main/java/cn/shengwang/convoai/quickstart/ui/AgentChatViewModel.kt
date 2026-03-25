@@ -104,9 +104,9 @@ class AgentChatViewModel : ViewModel() {
     private val _debugLogList = MutableStateFlow<List<String>>(emptyList())
     val debugLogList: StateFlow<List<String>> = _debugLogList.asStateFlow()
 
-    // Message error events (one-shot, not state)
-    private val _messageError = MutableSharedFlow<MessageError>(extraBufferCapacity = 1)
-    val messageError: SharedFlow<MessageError> = _messageError.asSharedFlow()
+    // Agent error events (one-shot, not state)
+    private val _agentError = MutableSharedFlow<ModuleError>(extraBufferCapacity = 1)
+    val agentError: SharedFlow<ModuleError> = _agentError.asSharedFlow()
 
     private var unifiedToken: String? = null
 
@@ -240,12 +240,12 @@ class AgentChatViewModel : ViewModel() {
         }
 
         override fun onAgentError(agentUserId: String, error: ModuleError) {
-            // Handle agent error
+            addStatusLog("Agent error: type=${error.type.value}, code=${error.code}, msg=${error.message}")
+            _agentError.tryEmit(error)
         }
 
         override fun onMessageError(agentUserId: String, error: MessageError) {
-            addStatusLog("Message error: type=${error.chatMessageType.value}, code=${error.code}, msg=${error.message}")
-            _messageError.tryEmit(error)
+            // Handle message error
         }
 
         override fun onTranscriptUpdated(agentUserId: String, transcript: Transcript) {
@@ -737,4 +737,3 @@ class AgentChatViewModel : ViewModel() {
         rtmClient = null
     }
 }
-

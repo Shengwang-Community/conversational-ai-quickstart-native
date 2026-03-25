@@ -59,8 +59,8 @@ class AgentChatActivity : BaseActivity<ActivityAgentChatBinding>() {
         // Observe debug log changes
         observeDebugLogs()
 
-        // Observe message errors
-        observeMessageErrors()
+        // Observe agent errors
+        observeAgentErrors()
     }
 
     override fun initView() {
@@ -142,10 +142,6 @@ class AgentChatActivity : BaseActivity<ActivityAgentChatBinding>() {
             .setCancelable(false)
             .build()
             .show(supportFragmentManager, "permission_dialog")
-    }
-
-    private fun handleStop() {
-        viewModel.hangup()
     }
 
     /**
@@ -325,12 +321,12 @@ class AgentChatActivity : BaseActivity<ActivityAgentChatBinding>() {
         }
     }
 
-    private fun observeMessageErrors() {
+    private fun observeAgentErrors() {
         lifecycleScope.launch {
-            viewModel.messageError.collect { error ->
+            viewModel.agentError.collect { error ->
                 Toast.makeText(
                     this@AgentChatActivity,
-                    "Message error [${error.chatMessageType.value}]: ${error.message} (code: ${error.code})",
+                    "Agent error [${error.type.value}]: ${error.message} (code: ${error.code})",
                     Toast.LENGTH_LONG
                 ).show()
             }
@@ -432,5 +428,4 @@ class TranscriptAdapter : ListAdapter<Transcript, RecyclerView.ViewHolder>(Trans
         }
     }
 }
-
 

@@ -22,25 +22,23 @@ import org.json.JSONObject
 object AgentStarter {
     private const val JSON_MEDIA_TYPE = "application/json; charset=utf-8"
     private const val API_BASE_URL = "https://api.agora.io/cn/api/conversational-ai-agent/v2/projects"
-    private const val DEFAULT_AGENT_RTC_UID = "1009527"
 
     private val okHttpClient: OkHttpClient by lazy {
         SecureOkHttpClient.create()
             .build()
     }
-
     /**
      * Start an agent with inline ASR/LLM/TTS pipeline configuration.
      *
      * @param channelName Channel name for the agent
-     * @param agentRtcUid Agent RTC UID (optional, defaults to "1009527")
+     * @param agentRtcUid Agent RTC UID
      * @param agentToken Token for the agent to join the RTC channel
      * @param authToken Agora token for REST API authorization (requires APP_CERTIFICATE enabled)
      * @return Result containing agentId or exception
      */
     suspend fun startAgentAsync(
         channelName: String,
-        agentRtcUid: String = DEFAULT_AGENT_RTC_UID,
+        agentRtcUid: String,
         agentToken: String,
         authToken: String
     ): Result<String> = withContext(Dispatchers.IO) {
