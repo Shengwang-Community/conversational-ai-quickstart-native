@@ -1,0 +1,18 @@
+{
+  "name": "voiceagent",
+  "version": "1.0.0",
+  "description": "VoiceAgent Application",
+  "homepage": "https://github.com/AgoraIO/Agora-AI-Recipes-Starter",
+  "dependencies": [
+    {
+      "name": "curl",
+      "platform": "windows",
+      "features": ["ssl"]
+    },
+    {
+      "name": "nlohmann-json",
+      "platform": "windows"
+    }
+  ],
+  "builtin-baseline": "159b1ef540e52bea606584ba64c72e9570efd765"
+}

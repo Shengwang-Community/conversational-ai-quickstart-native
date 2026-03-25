@@ -1,0 +1,32 @@
+# Uncomment the next line to define a global platform for your project
+platform :osx, '10.13'
+
+target 'VoiceAgent' do
+  # Comment the next line if you don't want to use dynamic frameworks
+  use_frameworks!
+
+  # Pods for VoiceAgent
+  pod 'ShengwangRtcEngine_macOS', '4.6.0'
+  pod 'AgoraRtm', '2.2.6', :subspecs => ['RtmKit']
+  pod 'SnapKit'
+
+end
+
+post_install do |installer|
+  installer.pods_project.targets.each do |target|
+    target.build_configurations.each do |config|
+      config.build_settings['MACOSX_DEPLOYMENT_TARGET'] = '10.13'
+      # Disable User Script Sandboxing to fix rsync permission issues
+      config.build_settings['ENABLE_USER_SCRIPT_SANDBOXING'] = 'NO'
+    end
+  end
+  
+  # Also disable sandboxing for the main project
+  installer.generated_projects.each do |project|
+    project.targets.each do |target|
+      target.build_configurations.each do |config|
+        config.build_settings['ENABLE_USER_SCRIPT_SANDBOXING'] = 'NO'
+      end
+    end
+  end
+end

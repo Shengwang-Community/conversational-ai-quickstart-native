@@ -1,0 +1,20 @@
+# macOS
+.DS_Store
+
+# Xcode
+build/
+DerivedData/
+xcuserdata/
+*.xcuserstate
+
+# Dependencies
+Pods/
+Podfile.lock
+
+# SDK Libraries
+*.xcframework/
+RTMLibs/
+
+# Config
+**/KeyCenter.*
+!*.example

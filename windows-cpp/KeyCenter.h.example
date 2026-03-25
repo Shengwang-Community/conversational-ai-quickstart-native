@@ -1,0 +1,51 @@
+#pragma once
+
+//==============================================================================
+// CONFIGURATION REQUIRED: Please configure your Agora credentials below
+//==============================================================================
+//
+// This is a template file. To use it:
+//
+// 1. This file has been copied to: VoiceAgent/src/KeyCenter.h
+//
+// 2. Open VoiceAgent/src/KeyCenter.h and replace the placeholder values:
+//    - YOUR_APP_ID_HERE              -> Your Agora App ID
+//    - YOUR_APP_CERTIFICATE_HERE     -> Your Agora App Certificate
+//    - YOUR_LLM_API_KEY_HERE         -> Your LLM provider key
+//    - YOUR_STT_KEY_HERE             -> Your Microsoft STT key
+//    - YOUR_TTS_KEY_HERE             -> Your MiniMax TTS key
+//    - YOUR_TTS_GROUP_ID_HERE        -> Your MiniMax group ID
+//
+// 3. Get your credentials from: https://console.agora.io/
+//
+// 4. After replacing all values, DELETE THE #error LINE BELOW (around line 26)
+//
+// 5. Save and rebuild the project
+//
+//==============================================================================
+
+#error "CONFIGURATION REQUIRED: Open this file (KeyCenter.h), replace YOUR_APP_ID_HERE and other placeholders with your actual credentials, then DELETE this #error line. Get credentials at https://console.agora.io/"
+
+// Configuration Keys and Constants
+class KeyCenter {
+public:
+    // Agora Credentials - Replace with your actual values
+    // Get your App ID from: https://console.agora.io/
+    static constexpr const char* AGORA_APP_ID = "YOUR_APP_ID_HERE";
+    static constexpr const char* AGORA_APP_CERTIFICATE = "YOUR_APP_CERTIFICATE_HERE";
+
+    // LLM - DeepSeek (OpenAI compatible)
+    static constexpr const char* LLM_API_KEY = "YOUR_LLM_API_KEY_HERE";
+    static constexpr const char* LLM_URL = "https://api.deepseek.com/v1/chat/completions";
+    static constexpr const char* LLM_MODEL = "deepseek-chat";
+
+    // STT - Microsoft Azure
+    static constexpr const char* STT_MICROSOFT_KEY = "YOUR_STT_KEY_HERE";
+    static constexpr const char* STT_MICROSOFT_REGION = "chinaeast2";
+
+    // TTS - MiniMax
+    static constexpr const char* TTS_MINIMAX_KEY = "YOUR_TTS_KEY_HERE";
+    static constexpr const char* TTS_MINIMAX_MODEL = "speech-01-turbo";
+    static constexpr const char* TTS_MINIMAX_VOICE_ID = "male-qn-qingse";
+    static constexpr const char* TTS_MINIMAX_GROUP_ID = "YOUR_TTS_GROUP_ID_HERE";
+};

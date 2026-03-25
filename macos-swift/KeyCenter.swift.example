@@ -1,0 +1,33 @@
+//
+//  KeyCenter.swift.example
+//  VoiceAgent
+//
+//  Created on 2025
+//  Copyright © 2025 Agora. All rights reserved.
+//
+//  IMPORTANT: Copy this file to KeyCenter.swift and fill in your credentials
+//
+
+import Foundation
+
+// MARK: - Configuration Keys
+struct KeyCenter {
+    // Agora Credentials - Replace with your actual values
+    static let AGORA_APP_ID = "YOUR_APP_ID_HERE"
+    static let AGORA_APP_CERTIFICATE = "YOUR_APP_CERTIFICATE_HERE"
+
+    // LLM - DeepSeek (OpenAI compatible)
+    static let LLM_API_KEY = "YOUR_LLM_API_KEY_HERE"
+    static let LLM_URL = "https://api.deepseek.com/v1/chat/completions"
+    static let LLM_MODEL = "deepseek-chat"
+
+    // STT - Microsoft Azure
+    static let STT_MICROSOFT_KEY = "YOUR_STT_KEY_HERE"
+    static let STT_MICROSOFT_REGION = "chinaeast2"
+
+    // TTS - MiniMax
+    static let TTS_MINIMAX_KEY = "YOUR_TTS_KEY_HERE"
+    static let TTS_MINIMAX_MODEL = "speech-01-turbo"
+    static let TTS_MINIMAX_VOICE_ID = "male-qn-qingse"
+    static let TTS_MINIMAX_GROUP_ID = "YOUR_TTS_GROUP_ID_HERE"
+}

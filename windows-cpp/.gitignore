@@ -1,0 +1,22 @@
+# Windows
+.vs/
+Thumbs.db
+
+# Build
+[Dd]ebug/
+[Rr]elease/
+x64/
+x86/
+VoiceAgent/build/
+
+# Dependencies
+vcpkg_installed/
+packages/
+
+# SDK Libraries
+VoiceAgent/rtcLib/
+VoiceAgent/rtmLib/
+
+# Config
+**/KeyCenter.*
+!*.example
