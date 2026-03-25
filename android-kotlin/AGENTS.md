@@ -23,7 +23,7 @@ The STT/LLM/TTS vendor configuration lives in two places that must be changed to
 2. `AgentStarter.kt` → `buildJsonPayload()` — the JSON builder that specifies vendor names and maps KeyCenter values into the request body
 
 To switch a provider:
-- Change the `"vendor"` value in `buildJsonPayload()` (e.g., `"microsoft"` → `"deepgram"` for STT)
+- Change the `"vendor"` value in `buildJsonPayload()` (e.g., `"microsoft"` → `"fengming"` for STT)
 - Update the `"params"` sub-object to match the new vendor's required fields
 - Add/update the corresponding values in `env.properties` (which flow through BuildConfig → KeyCenter)
 
@@ -104,9 +104,9 @@ app/src/main/java/
 ### AgentStarter
 
 - `startAgentAsync()`: POST `/join/`, request body carries full Pipeline config
-  - STT: Microsoft Azure (key + region)
-  - LLM: OpenAI-compatible endpoint (url + api_key + model + system_messages)
-  - TTS: MiniMax (key + model + voice_id + group_id)
+  - STT: Fengming ASR
+  - LLM: 阿里云百炼千问（DashScope OpenAI-compatible endpoint）
+  - TTS: 火山引擎（token + app_id + cluster + voice_type）
   - Advanced features: `enable_rtm: true`, `data_channel: "rtm"`, `enable_string_uid: true`, `idle_timeout: 120`
   - Remote UIDs: `remote_rtc_uids: ["*"]`
 - `stopAgentAsync()`: POST `/agents/{agentId}/leave`
@@ -152,15 +152,11 @@ Gradle validates all required properties at build time. If any are missing or em
 |-------|-------------|----------|---------|
 | `APP_ID` | ShengWang App ID | ✅ | — |
 | `APP_CERTIFICATE` | ShengWang App Certificate (must be enabled) | ✅ | — |
-| `LLM_API_KEY` | LLM API Key (e.g. DeepSeek) | ✅ | — |
-| `LLM_URL` | LLM endpoint URL | ✅ | `https://api.deepseek.com/v1/chat/completions` |
-| `LLM_MODEL` | LLM model name | ✅ | `deepseek-chat` |
-| `STT_MICROSOFT_KEY` | Microsoft Azure STT Key | ✅ | — |
-| `STT_MICROSOFT_REGION` | Azure region | | `chinaeast2` |
-| `TTS_MINIMAX_KEY` | MiniMax TTS Key | ✅ | — |
-| `TTS_MINIMAX_MODEL` | TTS model | | `speech-01-turbo` |
-| `TTS_MINIMAX_VOICE_ID` | Voice ID | | `male-qn-qingse` |
-| `TTS_MINIMAX_GROUP_ID` | MiniMax Group ID | ✅ | — |
+| `LLM_API_KEY` | DashScope API Key | ✅ | — |
+| `LLM_URL` | Qwen OpenAI-compatible endpoint URL | | `https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions` |
+| `LLM_MODEL` | Qwen model name | | `qwen-plus` |
+| `TTS_BYTEDANCE_APP_ID` | Volcengine TTS App ID | ✅ | — |
+| `TTS_BYTEDANCE_TOKEN` | Volcengine TTS access token | ✅ | — |
 
 ### APP_CERTIFICATE Must Be Enabled
 
@@ -173,7 +169,7 @@ Make sure to:
 ### Build-Time Validation
 
 `build.gradle.kts` validates the following properties are non-empty at build time:
-`APP_ID`, `APP_CERTIFICATE`, `LLM_API_KEY`, `LLM_URL`, `LLM_MODEL`, `STT_MICROSOFT_KEY`, `TTS_MINIMAX_KEY`, `TTS_MINIMAX_GROUP_ID`
+`APP_ID`, `APP_CERTIFICATE`, `LLM_API_KEY`, `TTS_BYTEDANCE_APP_ID`, `TTS_BYTEDANCE_TOKEN`
 
 If any are missing, the build fails with a message listing the missing properties.
 
@@ -206,11 +202,11 @@ Token generated via Demo service (must be replaced with your own backend in prod
     "idle_timeout": 120,
     "advanced_features": { "enable_rtm": true },
     "asr": {
-      "vendor": "microsoft",
-      "language": "zh-CN",
-      "params": { "key": "<STT_MICROSOFT_KEY>", "region": "<STT_MICROSOFT_REGION>" }
+      "vendor": "fengming",
+      "language": "zh-CN"
     },
     "llm": {
+      "vendor": "aliyun",
       "url": "<LLM_URL>",
       "api_key": "<LLM_API_KEY>",
       "system_messages": [{ "role": "system", "content": "You are a helpful AI assistant." }],
@@ -219,12 +215,15 @@ Token generated via Demo service (must be replaced with your own backend in prod
       "params": { "model": "<LLM_MODEL>" }
     },
     "tts": {
-      "vendor": "minimax",
+      "vendor": "bytedance",
       "params": {
-        "key": "<TTS_MINIMAX_KEY>",
-        "model": "<TTS_MINIMAX_MODEL>",
-        "voice_setting": { "voice_id": "<TTS_MINIMAX_VOICE_ID>", "speed": 1.0 },
-        "group_id": "<TTS_MINIMAX_GROUP_ID>"
+        "token": "<TTS_BYTEDANCE_TOKEN>",
+        "app_id": "<TTS_BYTEDANCE_APP_ID>",
+        "cluster": "volcano_tts",
+        "voice_type": "BV700_streaming",
+        "speed_ratio": 1.0,
+        "volume_ratio": 1.0,
+        "pitch_ratio": 1.0
       }
     },
     "parameters": { "data_channel": "rtm", "enable_error_message": true }

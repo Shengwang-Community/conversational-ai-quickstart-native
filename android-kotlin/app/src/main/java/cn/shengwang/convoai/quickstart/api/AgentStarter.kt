@@ -17,7 +17,7 @@ import org.json.JSONObject
  * Starts/stops Conversational AI agents via Shengwang REST API.
  * Uses HTTP token auth mode: Authorization header is "agora token=<convoai_token>".
  * This auth mode requires APP_CERTIFICATE to be enabled in the ShengWang console.
- * Pipeline (STT/LLM/TTS) is configured inline in the request body.
+ * Pipeline (ASR/LLM/TTS) is configured inline in the request body.
  */
 object AgentStarter {
     private const val JSON_MEDIA_TYPE = "application/json; charset=utf-8"
@@ -30,7 +30,7 @@ object AgentStarter {
     }
 
     /**
-     * Start an agent with inline STT/LLM/TTS pipeline configuration.
+     * Start an agent with inline ASR/LLM/TTS pipeline configuration.
      *
      * @param channelName Channel name for the agent
      * @param agentRtcUid Agent RTC UID (optional, defaults to "1009527")
@@ -85,7 +85,7 @@ object AgentStarter {
     }
 
     /**
-     * Build JSON payload with inline STT/LLM/TTS pipeline configuration.
+     * Build JSON payload with inline ASR/LLM/TTS pipeline configuration.
      * Matches the Shengwang Conversational AI REST API v2 format.
      */
     private fun buildJsonPayload(
@@ -110,20 +110,17 @@ object AgentStarter {
                     put("enable_rtm", true)
                 })
 
-                // STT - Microsoft Azure
+                // ASR - Shengwang Fengming
                 put("asr", JSONObject().apply {
-                    put("vendor", "microsoft")
+                    put("vendor", "fengming")
                     put("language", "zh-CN")
-                    put("params", JSONObject().apply {
-                        put("key", KeyCenter.STT_MICROSOFT_KEY)
-                        put("region", KeyCenter.STT_MICROSOFT_REGION)
-                    })
                 })
 
-                // LLM - DeepSeek (OpenAI compatible)
+                // LLM - Qwen via DashScope OpenAI-compatible endpoint
                 put("llm", JSONObject().apply {
                     put("url", KeyCenter.LLM_URL)
                     put("api_key", KeyCenter.LLM_API_KEY)
+                    put("vendor", "aliyun")
                     put("system_messages", JSONArray().apply {
                         put(JSONObject().apply {
                             put("role", "system")
@@ -137,17 +134,17 @@ object AgentStarter {
                     })
                 })
 
-                // TTS - MiniMax
+                // TTS - Volcengine / ByteDance
                 put("tts", JSONObject().apply {
-                    put("vendor", "minimax")
+                    put("vendor", "bytedance")
                     put("params", JSONObject().apply {
-                        put("key", KeyCenter.TTS_MINIMAX_KEY)
-                        put("model", KeyCenter.TTS_MINIMAX_MODEL)
-                        put("voice_setting", JSONObject().apply {
-                            put("voice_id", KeyCenter.TTS_MINIMAX_VOICE_ID)
-                            put("speed", 1.0)
-                        })
-                        put("group_id", KeyCenter.TTS_MINIMAX_GROUP_ID)
+                        put("token", KeyCenter.TTS_BYTEDANCE_TOKEN)
+                        put("app_id", KeyCenter.TTS_BYTEDANCE_APP_ID)
+                        put("cluster", "volcano_tts")
+                        put("voice_type", "BV700_streaming")
+                        put("speed_ratio", 1.0)
+                        put("volume_ratio", 1.0)
+                        put("pitch_ratio", 1.0)
                     })
                 })
 

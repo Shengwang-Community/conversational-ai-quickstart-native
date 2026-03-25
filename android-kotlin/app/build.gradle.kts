@@ -21,11 +21,8 @@ val requiredProperties = listOf(
     "APP_ID",
     "APP_CERTIFICATE",
     "LLM_API_KEY",
-    "LLM_URL",
-    "LLM_MODEL",
-    "STT_MICROSOFT_KEY",
-    "TTS_MINIMAX_KEY",
-    "TTS_MINIMAX_GROUP_ID"
+    "TTS_BYTEDANCE_APP_ID",
+    "TTS_BYTEDANCE_TOKEN"
 )
 
 val missingProperties = mutableListOf<String>()
@@ -71,19 +68,14 @@ android {
         buildConfigField("String", "APP_CERTIFICATE", "\"${envProperties.getProperty("APP_CERTIFICATE", "")}\"")
 
         // LLM configuration
+        // providers.md baseline only requires LLM_API_KEY; URL/model can use defaults.
         buildConfigField("String", "LLM_API_KEY", "\"${envProperties.getProperty("LLM_API_KEY", "")}\"")
-        buildConfigField("String", "LLM_URL", "\"${envProperties.getProperty("LLM_URL", "https://api.deepseek.com/v1/chat/completions")}\"")
-        buildConfigField("String", "LLM_MODEL", "\"${envProperties.getProperty("LLM_MODEL", "deepseek-chat")}\"")
-
-        // STT configuration
-        buildConfigField("String", "STT_MICROSOFT_KEY", "\"${envProperties.getProperty("STT_MICROSOFT_KEY", "")}\"")
-        buildConfigField("String", "STT_MICROSOFT_REGION", "\"${envProperties.getProperty("STT_MICROSOFT_REGION", "chinaeast2")}\"")
+        buildConfigField("String", "LLM_URL", "\"${envProperties.getProperty("LLM_URL", "https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions")}\"")
+        buildConfigField("String", "LLM_MODEL", "\"${envProperties.getProperty("LLM_MODEL", "qwen-plus")}\"")
 
         // TTS configuration
-        buildConfigField("String", "TTS_MINIMAX_KEY", "\"${envProperties.getProperty("TTS_MINIMAX_KEY", "")}\"")
-        buildConfigField("String", "TTS_MINIMAX_MODEL", "\"${envProperties.getProperty("TTS_MINIMAX_MODEL", "speech-01-turbo")}\"")
-        buildConfigField("String", "TTS_MINIMAX_VOICE_ID", "\"${envProperties.getProperty("TTS_MINIMAX_VOICE_ID", "male-qn-qingse")}\"")
-        buildConfigField("String", "TTS_MINIMAX_GROUP_ID", "\"${envProperties.getProperty("TTS_MINIMAX_GROUP_ID", "")}\"")
+        buildConfigField("String", "TTS_BYTEDANCE_APP_ID", "\"${envProperties.getProperty("TTS_BYTEDANCE_APP_ID", "")}\"")
+        buildConfigField("String", "TTS_BYTEDANCE_TOKEN", "\"${envProperties.getProperty("TTS_BYTEDANCE_TOKEN", "")}\"")
     }
 
     buildTypes {

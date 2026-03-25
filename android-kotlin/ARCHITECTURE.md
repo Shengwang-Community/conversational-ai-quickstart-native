@@ -102,9 +102,9 @@ Both ready (rtcJoined && rtmLoggedIn)
             enable_string_uid: true,
             idle_timeout: 120,
             advanced_features: { enable_rtm: true },
-            asr: { vendor: "microsoft", language: "zh-CN", params: { key, region } },
-            llm: { url, api_key, system_messages, greeting_message, failure_message, params: { model } },
-            tts: { vendor: "minimax", params: { key, model, voice_setting: { voice_id, speed }, group_id } },
+            asr: { vendor: "fengming", language: "zh-CN" },
+            llm: { vendor: "aliyun", url, api_key, system_messages, greeting_message, failure_message, params: { model } },
+            tts: { vendor: "bytedance", params: { token, app_id, cluster, voice_type, speed_ratio, volume_ratio, pitch_ratio, emotion } },
             parameters: { data_channel: "rtm", enable_error_message: true }
           }
         }
@@ -293,7 +293,7 @@ env.properties (git ignored)
     │
     ▼ Gradle buildConfigField
     │
-BuildConfig.AGORA_APP_ID / LLM_API_KEY / STT_MICROSOFT_KEY / TTS_MINIMAX_KEY / ...
+BuildConfig.AGORA_APP_ID / LLM_API_KEY / TTS_BYTEDANCE_TOKEN / ...
     │
     ▼
 KeyCenter (constant mapping)

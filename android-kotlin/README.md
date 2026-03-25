@@ -51,49 +51,40 @@ cd conversational-ai-quickstart-native/android-kotlin
       ```properties
       APP_ID=your_agora_app_id
       APP_CERTIFICATE=your_agora_app_certificate
-      LLM_API_KEY=sk-your_llm_api_key
-      LLM_URL=https://api.deepseek.com/v1/chat/completions
-      LLM_MODEL=deepseek-chat
-      STT_MICROSOFT_KEY=your_microsoft_key
-      STT_MICROSOFT_REGION=chinaeast2
-      TTS_MINIMAX_KEY=your_minimax_key
-      TTS_MINIMAX_MODEL=speech-01-turbo
-      TTS_MINIMAX_VOICE_ID=male-qn-qingse
-      TTS_MINIMAX_GROUP_ID=your_minimax_group_id
+      LLM_API_KEY=sk-your_dashscope_api_key
+      TTS_BYTEDANCE_APP_ID=your_bytedance_app_id
+      TTS_BYTEDANCE_TOKEN=your_bytedance_access_token
       ```
 
    **配置项说明**：
     - `APP_ID`：你的声网 App ID（必需）
     - `APP_CERTIFICATE`：你的 App Certificate（必需，用于 Token 生成和 REST API 认证）
-    - `LLM_API_KEY`：LLM API Key（必需，如 DeepSeek）
-    - `LLM_URL`：LLM API 地址（必需）
-    - `LLM_MODEL`：LLM 模型名称（必需）
-    - `STT_MICROSOFT_KEY`：Microsoft Azure 语音识别 Key（必需）
-    - `STT_MICROSOFT_REGION`：Microsoft Azure 区域（可选，默认 chinaeast2）
-    - `TTS_MINIMAX_KEY`：MiniMax TTS API Key（必需）
-    - `TTS_MINIMAX_MODEL`：MiniMax TTS 模型（可选，默认 speech-01-turbo）
-    - `TTS_MINIMAX_VOICE_ID`：MiniMax 语音 ID（可选，默认 male-qn-qingse）
-    - `TTS_MINIMAX_GROUP_ID`：MiniMax Group ID（必需）
+    - `LLM_API_KEY`：LLM API Key（必需，如阿里云百炼 DashScope）
+    - `LLM_URL`：LLM API 地址（可选，默认 `https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions`）
+    - `LLM_MODEL`：LLM 模型名称（可选，默认 `qwen-plus`）
+    - `TTS_BYTEDANCE_APP_ID`：火山引擎 TTS App ID（必需）
+    - `TTS_BYTEDANCE_TOKEN`：火山引擎 TTS Access Token（必需）
+    - 火山引擎其余 TTS 默认参数当前直接写在代码里：`cluster=volcano_tts`、`voice_type=BV700_streaming`、`speed_ratio=1.0`、`volume_ratio=1.0`、`pitch_ratio=1.0`
+    - 凤鸣 ASR 为声网内置供应商，当前示例不需要单独配置额外凭证
 
    **获取方式**：
     - 体验声网对话式 AI 引擎前，你需要先在声网控制台创建项目并开通对话式 AI 引擎服务，获取 App ID 和 App Certificate。[开通服务](https://doc.shengwang.cn/doc/convoai/restful/get-started/enable-service)
-    - LLM API Key：在 [DeepSeek 平台](https://platform.deepseek.com/) 获取
-    - STT Key：在 [Azure 门户](https://portal.azure.cn/) 获取
-    - TTS Key：在 [MiniMax 平台](https://platform.minimaxi.com/) 获取
+    - LLM API Key：在 [阿里云百炼](https://help.aliyun.com/zh/model-studio/get-api-key) 获取
+    - TTS 凭证：在 [火山引擎豆包语音文档](https://www.volcengine.com/docs/6561/105873) 对应控制台获取
 
    **注意**：
     - `env.properties` 文件包含敏感信息，不会被提交到版本控制系统。请确保不要将你的实际凭证提交到代码仓库。
     - 每次启动时会自动生成随机的 channelName，格式为 `channel_kotlin_XXXX`（XXXX 为 4 位随机数字），无需手动配置。
     - ⚠️ **重要**：`TokenGenerator.kt` 中的 Token 生成功能仅用于演示和开发测试，**生产环境必须使用自己的服务端生成 Token**。代码中已添加详细警告说明。
-    - STT/LLM/TTS pipeline 在代码中内联配置，无需在声网控制台创建 Pipeline。
-      - 等待 Gradle 同步完成
+    - 当前默认 pipeline 为 `fengming + qwen + bytedance`，并对齐了 skill 的 `providers.md` 基线：LLM 只要求 `LLM_API_KEY`，TTS 只要求 `TTS_BYTEDANCE_APP_ID` 和 `TTS_BYTEDANCE_TOKEN`。
+   - 等待 Gradle 同步完成
 
 3. **配置 Agent 启动方式**：
    
    默认配置，无需额外设置。Android 应用直接调用声网 RESTful API 启动 Agent，方便开发者快速体验功能。
    
    **使用前提**：
-   - 确保已正确配置 `env.properties` 文件中的声网凭证和 STT/LLM/TTS 配置。
+   - 确保已正确配置 `env.properties` 文件中的声网凭证和 Fengming/Qwen/Volcengine 配置。
    
    **适用场景**：
    - 快速体验和功能验证
@@ -180,7 +171,7 @@ app/src/main/java/
 **主要文件说明**：
 - `AgentChatActivity.kt`：主界面，包含日志显示、Agent 状态指示器、聊天气泡转录列表和控制按钮
 - `AgentChatViewModel.kt`：业务逻辑层，包含 RTC 引擎、RTM 客户端的管理和 Agent 启动逻辑
-- `AgentStarter.kt`：Agent 启动 API 封装，使用 `agora token=<token>` 认证模式，内联 STT/LLM/TTS pipeline 配置
+- `AgentStarter.kt`：Agent 启动 API 封装，使用 `agora token=<token>` 认证模式，内联 Fengming/Qwen/Volcengine pipeline 配置
 - `TokenGenerator.kt`：Token 生成工具（仅用于开发测试，生产环境需使用服务端生成）
 
 ## License
