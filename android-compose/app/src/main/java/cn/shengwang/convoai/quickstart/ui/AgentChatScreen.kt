@@ -1,7 +1,6 @@
 package cn.shengwang.convoai.quickstart.ui
 
 import android.app.Activity
-import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.background
@@ -101,7 +100,6 @@ import cn.shengwang.convoai.quickstart.ui.theme.TextSecondary
 import cn.shengwang.convoai.quickstart.ui.theme.TextSubtitle
 import cn.shengwang.convoai.quickstart.ui.theme.TextTertiary
 import cn.shengwang.convoai.quickstart.ui.theme.WarningAmberLight
-import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 
 @Composable
@@ -126,16 +124,6 @@ fun AgentChatScreen(
 
     BackHandler {
         activity?.finish()
-    }
-
-    LaunchedEffect(Unit) {
-        viewModel.agentError.collectLatest { error ->
-            Toast.makeText(
-                context,
-                "Agent error [${error.type.value}]: ${error.message} (code: ${error.code})",
-                Toast.LENGTH_LONG
-            ).show()
-        }
     }
 
     LaunchedEffect(listState.isScrollInProgress) {
@@ -193,9 +181,9 @@ fun AgentChatScreen(
                     .padding(16.dp)
             ) {
                 HeaderSection()
-                Spacer(modifier = Modifier.height(12.dp))
+                Spacer(modifier = Modifier.height(8.dp))
                 LogSection(logs = debugLogList, scrollState = logScrollState)
-                Spacer(modifier = Modifier.height(12.dp))
+                Spacer(modifier = Modifier.height(8.dp))
                 TranscriptSection(
                     transcriptList = transcriptList,
                     listState = listState,

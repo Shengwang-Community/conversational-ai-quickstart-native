@@ -101,10 +101,10 @@ dependencies {
     implementation(libs.androidx.compose.ui.tooling.preview)
     implementation(libs.androidx.compose.material3)
     implementation(libs.androidx.compose.material3.adaptive.navigation.suite)
-    
-    // Agora SDKs
-    implementation(libs.agora.rtc)
-    implementation(libs.agora.rtm)
+
+    // Shengwang SDKs
+    implementation(libs.shengwang.rtc.full)
+    implementation(libs.shengwang.rtm.lite)
     
     // Network
     implementation(libs.okhttp.core)

@@ -5,6 +5,7 @@
 ```text
 .
 ├── android-compose/         # Android quickstart (Kotlin + Compose)
+├── android-java/            # Android quickstart (Java + View/XML)
 ├── android-kotlin/          # Android quickstart (Kotlin + View/XML)
 ├── ios-swift/               # iOS quickstart (Swift)
 ├── README.md                # Repo overview
@@ -16,15 +17,15 @@ Each platform directory owns its own `README.md`, `AGENTS.md`, `ARCHITECTURE.md`
 
 ## Key Files by Concern
 
-| Concern | Android Compose | Android Kotlin | iOS |
-|---------|-----------------|----------------|-----|
-| Build config / dependencies | `app/build.gradle.kts` | `app/build.gradle.kts` | `Podfile` |
-| Credentials & provider config | `KeyCenter.kt` + `env.properties` | `KeyCenter.kt` + `env.properties` | `KeyCenter.swift` |
-| Connection flow & lifecycle | `AgentChatViewModel.kt` | `AgentChatViewModel.kt` | `ViewController.swift` |
-| Agent start/stop REST API | `AgentStarter.kt` | `AgentStarter.kt` | `AgentManager.swift` |
-| Token generation (demo only) | `TokenGenerator.kt` | `TokenGenerator.kt` | `NetworkManager.swift` |
-| RTM event parsing (read-only) | `convoaiApi/` | `convoaiApi/` | `ConversationalAIAPI/` |
-| Main UI | `MainActivity.kt` + `AgentChatScreen.kt` | `AgentChatActivity.kt` + XML layouts | `Chat/` views |
+| Concern | Android Compose | Android Java | Android Kotlin | iOS |
+|---------|-----------------|--------------|----------------|-----|
+| Build config / dependencies | `app/build.gradle.kts` | `app/build.gradle` | `app/build.gradle.kts` | `Podfile` |
+| Credentials & provider config | `KeyCenter.kt` + `env.properties` | `KeyCenter.java` + `env.properties` | `KeyCenter.kt` + `env.properties` | `KeyCenter.swift` |
+| Connection flow & lifecycle | `AgentChatViewModel.kt` | `AgentChatViewModel.java` | `AgentChatViewModel.kt` | `ViewController.swift` |
+| Agent start/stop REST API | `AgentStarter.kt` | `AgentStarter.java` | `AgentStarter.kt` | `AgentManager.swift` |
+| Token generation (demo only) | `TokenGenerator.kt` | `TokenGenerator.java` | `TokenGenerator.kt` | `NetworkManager.swift` |
+| RTM event parsing (read-only) | `convoaiApi/` | `convoaiApi/` | `convoaiApi/` | `ConversationalAIAPI/` |
+| Main UI | `MainActivity.kt` + `AgentChatScreen.kt` | `AgentChatActivity.java` + XML layouts | `AgentChatActivity.kt` + XML layouts | `Chat/` views |
 
 ## How It Fits Together
 

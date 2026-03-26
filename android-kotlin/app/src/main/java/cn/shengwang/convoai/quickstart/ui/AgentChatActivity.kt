@@ -58,9 +58,6 @@ class AgentChatActivity : BaseActivity<ActivityAgentChatBinding>() {
 
         // Observe debug log changes
         observeDebugLogs()
-
-        // Observe agent errors
-        observeAgentErrors()
     }
 
     override fun initView() {
@@ -321,18 +318,6 @@ class AgentChatActivity : BaseActivity<ActivityAgentChatBinding>() {
         }
     }
 
-    private fun observeAgentErrors() {
-        lifecycleScope.launch {
-            viewModel.agentError.collect { error ->
-                Toast.makeText(
-                    this@AgentChatActivity,
-                    "Agent error [${error.type.value}]: ${error.message} (code: ${error.code})",
-                    Toast.LENGTH_LONG
-                ).show()
-            }
-        }
-    }
-
     /**
      * Scroll RecyclerView to the bottom to show latest transcript
      */
@@ -428,4 +413,3 @@ class TranscriptAdapter : ListAdapter<Transcript, RecyclerView.ViewHolder>(Trans
         }
     }
 }
-

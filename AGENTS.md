@@ -11,6 +11,7 @@ This repo is meant to be a reference implementation — keep it simple, read the
 | Directory | Platform | Language |
 |-----------|----------|----------|
 | `android-compose/` | Android | Kotlin + Compose |
+| `android-java/` | Android | Java |
 | `android-kotlin/` | Android | Kotlin |
 | `ios-swift/` | iOS | Swift |
 
@@ -20,7 +21,7 @@ Each platform does the same thing with its own idioms. If you need to understand
 
 Don't overthink it. The codebase is small on purpose. A few pointers:
 
-- Dependencies and SDK versions → check each platform's build config (`build.gradle.kts` / `Podfile`)
+- Dependencies and SDK versions → check each platform's build config (`build.gradle` / `build.gradle.kts` / `Podfile`)
 - Credentials and provider config → look for the "KeyCenter" equivalent in each project
 - The connection flow (token → RTC join → RTM login → start agent) → lives in the main ViewModel / ViewController
 - Agent start/stop REST calls → a single API wrapper file per platform

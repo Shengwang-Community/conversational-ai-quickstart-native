@@ -74,9 +74,9 @@ cd conversational-ai-quickstart-native/android-kotlin
 
    **注意**：
     - `env.properties` 文件包含敏感信息，不会被提交到版本控制系统。请确保不要将你的实际凭证提交到代码仓库。
-    - 每次启动时会自动生成随机的 channelName，格式为 `channel_kotlin_XXXX`（XXXX 为 4 位随机数字），无需手动配置。
+    - 每次启动时会自动生成随机的 channelName，格式为 `channel_kotlin_<6-digit-random>`，无需手动配置。
     - ⚠️ **重要**：`TokenGenerator.kt` 中的 Token 生成功能仅用于演示和开发测试，**生产环境必须使用自己的服务端生成 Token**。代码中已添加详细警告说明。
-    - 当前默认 pipeline 为 `fengming + qwen + bytedance`，并对齐了 skill 的 `providers.md` 基线：LLM 只要求 `LLM_API_KEY`，TTS 只要求 `TTS_BYTEDANCE_APP_ID` 和 `TTS_BYTEDANCE_TOKEN`。
+    - 当前默认 pipeline 为 `fengming + qwen + bytedance`：LLM 只要求 `LLM_API_KEY`，TTS 只要求 `TTS_BYTEDANCE_APP_ID` 和 `TTS_BYTEDANCE_TOKEN`。
    - 等待 Gradle 同步完成
 
 3. **配置 Agent 启动方式**：
@@ -116,7 +116,7 @@ cd conversational-ai-quickstart-native/android-kotlin
 2. **启动 Agent**：
    - 点击"Start Agent"按钮
    - 按钮变为禁用态"Connecting..."，应用自动：
-     - 生成随机 channelName（格式：`channel_kotlin_XXXX`）
+     - 生成随机 channelName（格式：`channel_kotlin_<6-digit-random>`）
      - 加入 RTC 频道并登录 RTM
      - 连接成功后自动启动 AI Agent
    - 如果启动失败，按钮变为"Retry"
@@ -142,37 +142,13 @@ cd conversational-ai-quickstart-native/android-kotlin
 - ✅ 停止功能正常（断开连接，按钮恢复为 Start Agent）
 - ✅ 错误处理正常（失败时可重试）
 
-## 项目结构
+## 关键文件
 
-```
-app/src/main/java/
-├── cn/shengwang/convoai/quickstart/   # 业务代码
-│   ├── ui/                            # UI 层
-│   │   ├── AgentChatActivity.kt          # 主界面（日志、转录、控制按钮）
-│   │   ├── AgentChatViewModel.kt         # ViewModel（RTC/RTM/Agent 生命周期）
-│   │   ├── CommonDialog.kt              # 通用对话框
-│   │   └── common/                      # 基类
-│   ├── api/                           # 网络层
-│   │   ├── AgentStarter.kt              # Agent REST API（start/stop）
-│   │   ├── TokenGenerator.kt            # Token 生成（仅 Demo）
-│   │   └── net/                         # OkHttp 配置
-│   ├── tools/                         # 工具类
-│   │   ├── PermissionHelp.kt            # 权限处理
-│   │   └── Base64Encoding.kt
-│   ├── KeyCenter.kt                   # 配置中心（BuildConfig → 常量）
-│   └── AgentApp.kt                    # Application
-├── io/agora/convoai/convoaiApi/       # Conversational AI SDK 封装（禁止修改）
-│   ├── IConversationalAIAPI.kt          # 接口定义 + 数据模型
-│   ├── ConversationalAIAPIImpl.kt       # 实现（RTM 消息解析 → 事件回调）
-│   ├── ConversationalAIUtils.kt         # 工具方法
-│   └── subRender/                       # 字幕渲染
-```
-
-**主要文件说明**：
 - `AgentChatActivity.kt`：主界面，包含日志显示、Agent 状态指示器、聊天气泡转录列表和控制按钮
 - `AgentChatViewModel.kt`：业务逻辑层，包含 RTC 引擎、RTM 客户端的管理和 Agent 启动逻辑
 - `AgentStarter.kt`：Agent 启动 API 封装，使用 `agora token=<token>` 认证模式，内联 Fengming/Qwen/Volcengine pipeline 配置
 - `TokenGenerator.kt`：Token 生成工具（仅用于开发测试，生产环境需使用服务端生成）
+- `io/agora/convoai/convoaiApi/`：声网 ConversationalAIAPI 封装，禁止修改
 
 ## License
 

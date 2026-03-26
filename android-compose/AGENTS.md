@@ -1,13 +1,5 @@
 # Conversational AI Quickstart Android Compose — AI Assistant Guide
 
-## Conversation Modes
-
-| Mode | Trigger | Strategy |
-|------|---------|----------|
-| workflow | Contains feat/fix/refactor/chore, or explicit dev tasks | Start workflow, enforce state management |
-| continue | "Continue/resume", or unfinished state exists | Restore context first, then continue |
-| general | Technical questions, code explanations, general inquiries | Direct answer, no workflow |
-
 ## How to Use This Project
 
 This is a complete, runnable Android demo for real-time voice conversation with an AI agent, built with Jetpack Compose.
@@ -38,6 +30,8 @@ Conversational AI Quickstart — Android real-time voice conversation client bui
 
 The client directly calls ShengWang RESTful API to start/stop Agent, with STT (Speech-to-Text), LLM (Large Language Model), and TTS (Text-to-Speech) configuration in the request body, authenticated via HTTP token (`Authorization: agora token=<token>`). This auth mode requires `APP_CERTIFICATE` to be enabled.
 
+Current quickstart scope is limited to voice session startup, transcript display, state rendering, mute, and stop. It does not expose text or image message sending UI.
+
 ## Tech Stack
 
 | Category | Technology |
@@ -55,37 +49,7 @@ The client directly calls ShengWang RESTful API to start/stop Agent, with STT (S
 | Navigation | Single-activity Compose screen |
 | ConversationalAIAPI | Built-in module, do not modify |
 
-## Project Structure
-
-```text
-app/src/main/java/
-├── cn/shengwang/convoai/quickstart/   # Business code
-│   ├── ui/                            # UI Layer
-│   │   ├── AgentChatScreen.kt         # Compose main screen (logs, transcripts, controls)
-│   │   ├── AgentChatViewModel.kt      # ViewModel (RTC/RTM/Agent lifecycle)
-│   │   └── theme/                     # Compose colors, typography, theme
-│   │       ├── Color.kt
-│   │       ├── Theme.kt
-│   │       └── Type.kt
-│   ├── api/                           # Network Layer
-│   │   ├── AgentStarter.kt           # Agent REST API (start/stop)
-│   │   ├── TokenGenerator.kt         # Token generation (Demo only)
-│   │   └── net/                      # OkHttp configuration
-│   │       ├── HttpLogger.kt
-│   │       └── SecureOkHttpClient.kt
-│   ├── tools/                         # Utilities
-│   │   └── PermissionHelp.kt         # Permission handling
-│   ├── KeyCenter.kt                   # Config center (BuildConfig → constants)
-│   ├── MainActivity.kt                # Entry activity
-│   └── AgentApp.kt                    # Application
-├── io/agora/convoai/convoaiApi/       # Conversational AI SDK wrapper (read-only)
-│   ├── IConversationalAIAPI.kt        # Interface definitions + data models
-│   ├── ConversationalAIAPIImpl.kt     # Implementation (RTM message parsing → event callbacks)
-│   ├── ConversationalAIUtils.kt       # Utility methods
-│   └── subRender/                     # Subtitle rendering
-│       ├── MessageParser.kt
-│       └── TranscriptController.kt
-```
+For runtime structure, see `ARCHITECTURE.md`. For entry files, see `README.md`.
 
 ## Core Modules
 
@@ -103,7 +67,6 @@ app/src/main/java/
   - `agentState`
   - `transcriptList`
   - `debugLogList`
-  - `agentError`
 
 ### AgentChatViewModel
 
@@ -114,10 +77,9 @@ app/src/main/java/
   - `agentState: StateFlow<AgentState>` — Agent state (`IDLE/SILENT/LISTENING/THINKING/SPEAKING`)
   - `transcriptList: StateFlow<List<Transcript>>` — transcript list
   - `debugLogList: StateFlow<List<String>>` — debug logs
-  - `agentError: SharedFlow<ModuleError>` — one-shot agent errors
 - Auto flow: join RTC + login RTM → both ready → generate tokens → start Agent
 - `userId` / `agentUid` are randomly generated in the companion object
-- `channelName` format: `channel_compose_{random}`
+- `channelName` format: `channel_compose_<6-digit-random>`
 
 ### AgentStarter
 
@@ -141,15 +103,10 @@ app/src/main/java/
 ### ConversationalAIAPI
 
 - Wraps RTM message subscription/parsing
-- Event callbacks (`IConversationalAIAPIEventHandler`):
+- The quickstart currently reacts to:
   - `onAgentStateChanged`
   - `onTranscriptUpdated`
-  - `onAgentMetrics`
-  - `onAgentError`
-  - `onAgentInterrupted`
-  - `onMessageError`
-  - `onMessageReceiptUpdated`
-  - `onAgentVoiceprintStateChanged`
+  - `onAgentError` (logged through ViewModel state/logs)
   - `onDebugLog`
 - Audio settings: `loadAudioSettings(AUDIO_SCENARIO_AI_CLIENT)` must be called before joinChannel
 
@@ -230,9 +187,9 @@ Token generated via Demo service (must be replaced with your own backend in prod
       "vendor": "aliyun",
       "url": "<LLM_URL>",
       "api_key": "<LLM_API_KEY>",
-      "system_messages": [{ "role": "system", "content": "You are a helpful AI assistant." }],
-      "greeting_message": "Hello! I am your AI assistant. How can I help you?",
-      "failure_message": "I'm sorry, I'm having trouble processing your request.",
+      "system_messages": [{ "role": "system", "content": "你是一名有帮助的 AI 助手。" }],
+      "greeting_message": "你好！我是你的 AI 助手，有什么可以帮你？",
+      "failure_message": "抱歉，我暂时处理不了你的请求，请稍后再试。",
       "params": { "model": "<LLM_MODEL>" }
     },
     "tts": {
@@ -276,9 +233,8 @@ RTM message → ConversationalAIAPI → EventHandler callbacks
                               AgentChatScreen recomposes
 ```
 
-## UI Alignment Rules
+## UI Rules
 
-- Keep the Compose screen visually aligned with `android-kotlin`
 - Preserve:
   - Title / subtitle
   - Dark gradient background
@@ -287,4 +243,4 @@ RTM message → ConversationalAIAPI → EventHandler callbacks
   - Bottom status bar
   - `Start Agent` / `Mute` / `Stop Agent` controls
 - Agent transcript stays left-aligned with `AI` avatar; user transcript stays right-aligned with `Me` avatar
-- Status colors must match Kotlin baseline: idle, listening, thinking, speaking, silent
+- Status colors should stay semantically distinct for idle, listening, thinking, speaking, and silent

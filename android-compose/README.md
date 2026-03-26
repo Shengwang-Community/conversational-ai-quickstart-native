@@ -100,7 +100,7 @@ TTS_BYTEDANCE_TOKEN=your_bytedance_access_token
 
 ## 三段式 Pipeline
 
-`AgentStarter.kt` 默认使用与 `android-kotlin` 一致的三段式配置：
+`AgentStarter.kt` 默认使用以下三段式配置：
 
 - **ASR**：Shengwang Fengming（`vendor=fengming`, `language=zh-CN`）
 - **LLM**：阿里云百炼千问（DashScope OpenAI-compatible）
@@ -151,25 +151,20 @@ TTS_BYTEDANCE_TOKEN=your_bytedance_access_token
 - [ ] 静音/取消静音正常
 - [ ] 停止功能正常
 
-## 项目结构
+## 关键文件
 
-```text
-android-compose/
-├── app/
-│   ├── src/main/
-│   │   ├── java/io/agora/convoai/example/startup/
-│   │   │   ├── ui/                 # Compose UI 和 ViewModel
-│   │   │   ├── api/                # AgentStarter / TokenGenerator / OkHttp
-│   │   │   ├── tools/              # PermissionHelp 等工具
-│   │   │   └── KeyCenter.kt        # BuildConfig -> 常量配置
-│   │   ├── res/                    # Android 资源
-│   │   └── java/io/agora/convoai/convoaiApi/
-│   │       └── ...                 # ConversationalAIAPI（只读，禁止修改）
-├── env.example.properties          # 配置模板
-├── README.md                       # 本文档
-├── AGENTS.md                       # Compose 平台协作说明
-└── ARCHITECTURE.md                 # Compose 平台架构说明
-```
+- `app/src/main/java/cn/shengwang/convoai/quickstart/MainActivity.kt`
+  Compose 入口 Activity，负责挂载主题和 `AgentChatScreen`
+- `app/src/main/java/cn/shengwang/convoai/quickstart/ui/AgentChatScreen.kt`
+  主界面，负责日志、状态、转录和控制按钮渲染
+- `app/src/main/java/cn/shengwang/convoai/quickstart/ui/AgentChatViewModel.kt`
+  RTC / RTM / Agent 生命周期与状态管理
+- `app/src/main/java/cn/shengwang/convoai/quickstart/api/AgentStarter.kt`
+  Agent start/stop REST API，包含内联三段式 pipeline 配置
+- `app/src/main/java/cn/shengwang/convoai/quickstart/api/TokenGenerator.kt`
+  Demo token 生成器，仅用于开发测试
+- `app/src/main/java/io/agora/convoai/convoaiApi/`
+  声网 ConversationalAIAPI 封装，禁止修改
 
 ## License
 

@@ -2,282 +2,162 @@
 
 ## Architecture Overview
 
+This quickstart is a single-screen voice conversation demo built with Jetpack Compose.
+
+Current scope:
+
+- Start Agent
+- RTC join + RTM login
+- Real-time transcript rendering
+- Agent status rendering
+- Mute / unmute
+- Stop Agent and cleanup
+
+Out of scope for this quickstart:
+
+- Text or image message sending UI
+- Multi-screen navigation
+- Backend-owned token / agent startup flow
+
+## Page Layout
+
+The Compose screen is intentionally single-page and is organized into these regions:
+
+- title and subtitle
+- log panel
+- transcript panel
+- bottom agent status bar
+- start / retry / mute / stop controls
+
+## Project Structure
+
 ```text
-┌─────────────────────────────────────────────────────────┐
-│                UI Layer (Compose)                       │
-│  MainActivity + AgentChatScreen                         │
-│  ┌─────────┐ ┌──────────┐ ┌──────────┐ ┌────────────┐  │
-│  │Log Panel│ │Status Bar│ │Transcript│ │  Controls  │  │
-│  └─────────┘ └──────────┘ └──────────┘ └────────────┘  │
-│                StateFlow / SharedFlow collection        │
-├─────────────────────────────────────────────────────────┤
-│                ViewModel Layer                          │
-│  AgentChatViewModel                                     │
-│  ┌──────────────────────────────────────────────────┐   │
-│  │ uiState: ConnectionState + isMuted               │   │
-│  │ agentState: AgentState                           │   │
-│  │ transcriptList: List<Transcript>                 │   │
-│  │ debugLogList: List<String>                       │   │
-│  │ agentError: SharedFlow<ModuleError>              │   │
-│  └──────────────────────────────────────────────────┘   │
-│         │              │              │                  │
-│    RTC Engine     RTM Client    ConversationalAIAPI     │
-├─────────────────────────────────────────────────────────┤
-│              SDK & API Layer                            │
-│  ┌──────────┐ ┌──────────┐ ┌────────────────────────┐  │
-│  │ RTC SDK  │ │ RTM SDK  │ │ ConversationalAIAPI    │  │
-│  │ (Audio)  │ │(Messaging)│ │(Event parsing+transcript│ │
-│  └──────────┘ └──────────┘ │       +chat)            │  │
-│         │              │   └────────────────────────┘  │
-├─────────────────────────────────────────────────────────┤
-│              Network Layer                              │
-│  ┌──────────────┐  ┌──────────────┐                     │
-│  │ AgentStarter │  │TokenGenerator│                     │
-│  │ (REST API)   │  │ (Demo Token) │                     │
-│  └──────────────┘  └──────────────┘                     │
-│         │                   │                           │
-│   ShengWang REST API    Demo Token Service              │
-└─────────────────────────────────────────────────────────┘
+app/src/main/java/
+├── cn/shengwang/convoai/quickstart/
+│   ├── ui/            # MainActivity + AgentChatScreen + ViewModel + theme
+│   ├── api/           # AgentStarter + TokenGenerator + OkHttp config
+│   ├── tools/         # Permission helpers
+│   ├── KeyCenter.kt
+│   └── AgentApp.kt
+└── io/agora/convoai/convoaiApi/
+    └── ...            # Read-only RTM parsing / transcript component
 ```
 
-## Module Dependencies
+## Runtime Shape
 
 ```text
-MainActivity
-    └── AgentChatScreen
-            └── AgentChatViewModel
-                    ├── RtcEngineEx (ShengWang RTC SDK)
-                    ├── RtmClient (ShengWang RTM SDK)
-                    ├── ConversationalAIAPIImpl
-                    │       ├── RtcEngine (audio config)
-                    │       ├── RtmClient (message subscription/parsing)
-                    │       ├── MessageParser (JSON parsing)
-                    │       └── TranscriptController (transcript rendering)
-                    ├── AgentStarter (REST API calls)
-                    │       └── SecureOkHttpClient (OkHttp config)
-                    └── TokenGenerator (Token generation)
-                            └── SecureOkHttpClient
-
-KeyCenter (BuildConfig → constant mapping)
-    └── Referenced by AgentStarter / TokenGenerator / ViewModel
+MainActivity / AgentChatScreen / AgentChatViewModel /
+RTC / RTM / ConversationalAIAPI / TokenGenerator / AgentStarter
 ```
 
-## Core Data Flows
+`convoaiApi/` is a read-only module that parses RTM payloads and emits agent / transcript callbacks.
 
-### 1. Connection Flow (User taps Start Agent)
+## Connection Flow (User taps Start Agent)
 
 ```text
-User taps Start Agent
-    │
-    ▼
-Check microphone permission
-    │
-    ▼
-generateUserToken()  ──→  TokenGenerator  ──→  Demo Token Service
-    │                                              │
-    ▼                                              ▼
-joinRtcChannel(token)                        Returns unified token
-    │                                         (shared by RTC + RTM)
-    ▼
-loginRtm(token)
-    │
-    ▼
-Both ready (rtcJoined && rtmLoggedIn)
-    │
-    ├── subscribeMessage(channelName)  ──→  RTM subscribe to channel
-    │
-    ├── generateTokensAsync(agentUid)  ──→  agentToken
-    │
-    ├── generateTokensAsync(agentUid)  ──→  authToken (REST API auth)
-    │
-    └── AgentStarter.startAgentAsync()
-            │
-            ▼
-        POST /v2/projects/{appId}/join/
-        Authorization: agora token=<authToken>
-        Body: {
-          name, properties: {
-            channel, token, agent_rtc_uid,
-            remote_rtc_uids: ["*"],
-            enable_string_uid: true,
-            idle_timeout: 120,
-            advanced_features: { enable_rtm: true },
-            asr: { vendor: "fengming", language: "zh-CN" },
-            llm: { vendor: "aliyun", url, api_key, system_messages, greeting_message, failure_message, params: { model } },
-            tts: { vendor: "bytedance", params: { token, app_id, cluster, voice_type, speed_ratio, volume_ratio, pitch_ratio } },
-            parameters: { data_channel: "rtm", enable_error_message: true }
-          }
-        }
-            │
-            ▼
-        Returns agent_id → saved to ViewModel
+Tap Start Agent
+  → check microphone permission
+  → generate userToken
+  → join RTC + login RTM
+  → subscribe RTM channel
+  → generate agentToken + authToken
+  → POST /join/ with inline ASR / LLM / TTS config
+  → save agentId
+  → uiState = Connected
 ```
 
-### 2. Real-time Communication Data Flow
+Compose-specific conventions:
+
+- `userId` and `agentUid` are random 6-digit integers and do not conflict
+- `channelName` format is `channel_compose_<6-digit-random>`
+- REST auth header is `Authorization: agora token=<authToken>`
+
+## Transcript Data Flow
 
 ```text
-┌──────────────┐          ┌──────────────┐          ┌──────────────┐
-│ User Device  │ RTC Audio│ ShengWang Cloud│ RTC Audio│  AI Agent    │
-│              │ ◄───────►│              │ ◄───────►│              │
-│  RTC Engine  │          │  RTC Service │          │  RTC Client  │
-└──────────────┘          └──────────────┘          └──────────────┘
-
-┌──────────────┐          ┌──────────────┐          ┌──────────────┐
-│ User Device  │ RTM Msg  │ ShengWang Cloud│ RTM Msg  │  AI Agent    │
-│              │ ◄───────►│              │ ◄───────►│              │
-│  RTM Client  │          │  RTM Service │          │  RTM Client  │
-└──────────────┘          └──────────────┘          └──────────────┘
+RTM message
+  → ConversationalAIAPI
+  → TranscriptController
+  → AgentChatViewModel.addTranscript(...)
+  → transcriptList update
+  → AgentChatScreen recomposes transcript bubbles
 ```
 
-### 3. ConversationalAIAPI Event Callbacks
+The current UI renders:
 
-RTM message subscription, parsing, and dispatching are encapsulated in `ConversationalAIAPI`. The business layer only needs to register callbacks:
+- agent transcript on the left with `AI`
+- user transcript on the right with `Me`
 
-```text
-ConversationalAIAPI (handles RTM messages internally)
-    │
-    ▼
-IConversationalAIAPIEventHandler callbacks:
-    │
-    ├── onAgentStateChanged()          → Agent state change (IDLE/LISTENING/THINKING/SPEAKING/SILENT)
-    ├── onTranscriptUpdated()          → Transcript content update
-    ├── onAgentMetrics()               → Performance metrics
-    ├── onAgentError()                 → Agent module error
-    ├── onAgentInterrupted()           → Agent interrupted
-    ├── onMessageError()               → Message send error
-    ├── onMessageReceiptUpdated()      → Message receipt
-    ├── onAgentVoiceprintStateChanged()-> Voiceprint state change
-    └── onDebugLog()                   → Debug log
-    │
-    ▼
-ViewModel updates StateFlow / SharedFlow
-    │
-    ▼
-Compose collects state → UI recomposition
-```
-
-### 4. Transcript Data Flow
+## UI State Rendering
 
 ```text
-RTM message (assistant.transcription / user.transcription)
-    │
-    ▼
-TranscriptController
-    │
-    ├── Parse turn_id, text, status, type
-    ├── Word mode: incremental rendering
-    ├── Text mode: full-text rendering
-    │
-    ▼
-IConversationTranscriptCallback.onTranscriptUpdated()
-    │
-    ▼
-ConversationalAIAPIEventHandler.onTranscriptUpdated()
-    │
-    ▼
-ViewModel.addTranscript(transcript)
-    │
-    ├── Deduplicate/update by turnId + type
-    │
-    ▼
-_transcriptList StateFlow update
-    │
-    ▼
-AgentChatScreen recomposes
-    │
-    ├── TranscriptType.AGENT → left-aligned bubble + "AI" avatar
-    └── TranscriptType.USER  → right-aligned bubble + "Me" avatar
-```
-
-### 5. UI State Rendering Flow
-
-```text
-ViewModel state update
-    │
-    ├── uiState        → Start / Connecting / Retry / Mute / Stop buttons
-    ├── agentState     → bottom status dot + text color
-    ├── transcriptList → transcript card content
-    ├── debugLogList   → log card content
-    └── agentError     → toast feedback
+uiState        → Start / Connecting / Retry / Mute / Stop buttons
+agentState     → bottom status bar color + text
+transcriptList → transcript panel content
+debugLogList   → log panel content
 ```
 
 ## Token Flow
 
-The project generates tokens three times, all via Demo Token Service (`TokenGenerator.generateTokensAsync`):
+The quickstart generates three token roles through the demo token service:
 
-| Token | Purpose | Generation Params | Usage |
-|-------|---------|-------------------|-------|
-| userToken | User joins RTC channel + logs in RTM | `uid=userId`, `channelName=""` | `joinRtcChannel()` / `loginRtm()` |
-| agentToken | Agent's credential to join RTC channel | `uid=agentUid`, `channelName=current channel` | startAgent request body `properties.token` |
-| authToken | REST API request authentication | `uid=agentUid`, `channelName=current channel` | Request header `Authorization: agora token=<authToken>` |
+| Token | Purpose | Usage |
+|-------|---------|-------|
+| `userToken` | User RTC join + RTM login | `joinRtcChannel()` / `loginRtm()` |
+| `agentToken` | Agent RTC join credential | Request body `properties.token` |
+| `authToken` | REST API authentication | `Authorization: agora token=<authToken>` |
 
-> Note: `userId` and `agentUid` are randomly generated (6-digit integers) in `AgentChatViewModel.companion`. `agentToken` and `authToken` share the same generation params but are generated separately for semantic clarity. `userToken` uses an empty `channelName`, producing a universal token for the current demo flow.
+Notes:
 
-```text
-TokenGenerator.generateTokensAsync()
-    │
-    ▼
-POST https://service.apprtc.cn/toolbox/v2/token/generate
-Body: { appId, appCertificate, channelName, uid, types: [1,2], expire }
-    │
-    ▼
-Response: { code: 0, data: { token: "007..." } }
-```
-
-> ⚠️ Demo Token Service is for development/testing only. Production must use your own server for token generation.
+- `userToken` uses `channelName=""` in the current demo flow
+- `agentToken` and `authToken` are generated after RTC / RTM are both ready
+- Production should replace the demo token service with a backend
 
 ## Agent Lifecycle
 
 ```text
-                    ┌─────────┐
-                    │  IDLE   │
-                    └────┬────┘
-                         │ startAgent()
-                         ▼
-                    ┌─────────┐
-                    │LISTENING│◄──────────────┐
-                    └────┬────┘               │
-                         │ Voice detected     │ TTS playback complete
-                         ▼                    │
-                    ┌─────────┐          ┌────┴────┐
-                    │THINKING │─────────►│SPEAKING │
-                    └─────────┘ LLM resp └────┬────┘
-                                              │ User interrupts
-                                              ▼
-                                         ┌─────────┐
-                                         │ SILENT  │
-                                         └────┬────┘
-                                              │
-                                              ▼
-                                         Back to LISTENING
+IDLE
+  → LISTENING
+  → THINKING
+  → SPEAKING
+  → LISTENING
 ```
 
-State is transmitted via RTM messages. `_agentState: MutableStateFlow<AgentState>` in ViewModel drives UI updates.
+Additional behavior:
 
-Idle timeout: `idle_timeout: 120` seconds — Agent auto-disconnects after no interaction.
+- `SILENT` can appear after interruption
+- tapping `Stop Agent` unsubscribes RTM, stops the Agent, leaves RTC, and resets UI state back toward idle
 
-## Resource Cleanup
+## Config Contract
 
-### Hangup Path
+```text
+env.properties
+  → BuildConfig
+  → KeyCenter
+  → AgentStarter / TokenGenerator / ViewModel
+```
 
-When the user taps `Stop Agent`:
+Required fields:
 
-- Unsubscribe RTM message channel via `conversationalAIAPI.unsubscribeMessage()`
-- Stop Agent via `AgentStarter.stopAgentAsync(agentId, authToken)`
-- Leave RTC channel
-- Reset:
-  - `connectionState`
-  - `transcriptList`
-  - `agentState`
-  - `authToken`
+- `APP_ID`
+- `APP_CERTIFICATE`
+- `LLM_API_KEY`
+- `TTS_BYTEDANCE_APP_ID`
+- `TTS_BYTEDANCE_TOKEN`
 
-### ViewModel onCleared()
+Optional fields:
 
-When the screen is destroyed:
+- `LLM_URL`
+- `LLM_MODEL`
 
-- Leave RTC channel
-- Logout RTM
-- Remove RTM event listener
-- Clear local RTC / RTM references
+Current default inline pipeline:
 
-`RtcEngine.destroy()` is still intentionally not called in this quickstart; the current implementation only nulls references on cleanup.
+- ASR: `fengming`
+- LLM: `aliyun` + `LLM_URL` + `LLM_MODEL`
+- TTS: `bytedance`
+
+## Constraints
+
+- This is a demo; token generation and agent startup are client-side for convenience
+- Production should move token generation and REST startup to a backend
+- `convoaiApi/` should be copied as-is and not modified in place

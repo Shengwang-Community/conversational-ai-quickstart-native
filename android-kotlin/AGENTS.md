@@ -1,13 +1,5 @@
 # Conversational AI Quickstart Android — AI Assistant Guide
 
-## Conversation Modes
-
-| Mode | Trigger | Strategy |
-|------|---------|----------|
-| workflow | Contains feat/fix/refactor/chore, or explicit dev tasks | Start workflow, enforce state management |
-| continue | "Continue/resume", or unfinished PROJECT_STATE.md exists | Read state file, restore context |
-| general | Technical questions, code explanations, general inquiries | Direct answer, no workflow |
-
 ## How to Use This Project
 
 This is a complete, runnable Android demo for real-time voice conversation with an AI agent.
@@ -37,6 +29,8 @@ Conversational AI Quickstart — Android real-time voice conversation client.
 
 The client directly calls ShengWang RESTful API to start/stop Agent, with STT (Speech-to-Text), LLM (Large Language Model), and TTS (Text-to-Speech) configuration in the request body, authenticated via HTTP token (`Authorization: agora token=<token>`). This auth mode requires APP_CERTIFICATE to be enabled.
 
+Current quickstart scope is limited to voice session startup, transcript display, state rendering, mute, and stop. It does not expose text or image message sending UI.
+
 ## Tech Stack
 
 | Category | Technology |
@@ -51,41 +45,9 @@ The client directly calls ShengWang RESTful API to start/stop Agent, with STT (S
 | RTC SDK | ShengWang RTC SDK (`io.agora.rtc:full-sdk:4.5.1`) |
 | RTM SDK | ShengWang RTM SDK (`io.agora:agora-rtm-lite:2.2.6`) |
 | Coroutines | Kotlin Coroutines 1.9.0 |
-| Navigation | Navigation Component 2.8.2 (SafeArgs) |
 | ConversationalAIAPI | Built-in module, do not modify |
 
-## Project Structure
-
-```
-app/src/main/java/
-├── cn/shengwang/convoai/quickstart/   # Business code
-│   ├── ui/                            # UI Layer
-│   │   ├── AgentChatActivity.kt          # Main screen (logs, transcripts, controls)
-│   │   ├── AgentChatViewModel.kt         # ViewModel (RTC/RTM/Agent lifecycle)
-│   │   ├── CommonDialog.kt              # Common dialog
-│   │   └── common/                      # Base classes
-│   │       ├── BaseActivity.kt
-│   │       ├── BaseDialogFragment.kt
-│   │       └── BaseFragment.kt
-│   ├── api/                           # Network Layer
-│   │   ├── AgentStarter.kt              # Agent REST API (start/stop)
-│   │   ├── TokenGenerator.kt            # Token generation (Demo only)
-│   │   └── net/                         # OkHttp configuration
-│   │       ├── HttpLogger.kt
-│   │       └── SecureOkHttpClient.kt
-│   ├── tools/                         # Utilities
-│   │   ├── PermissionHelp.kt            # Permission handling
-│   │   └── Base64Encoding.kt
-│   ├── KeyCenter.kt                   # Config center (BuildConfig → constants)
-│   └── AgentApp.kt                    # Application
-├── io/agora/convoai/convoaiApi/       # Conversational AI SDK wrapper (do not modify)
-│   ├── IConversationalAIAPI.kt          # Interface definitions + data models
-│   ├── ConversationalAIAPIImpl.kt       # Implementation (RTM message parsing → event callbacks)
-│   ├── ConversationalAIUtils.kt         # Utility methods
-│   └── subRender/                       # Subtitle rendering
-│       ├── MessageParser.kt
-│       └── TranscriptController.kt
-```
+For runtime structure, see `ARCHITECTURE.md`. For entry files, see `README.md`.
 
 ## Core Modules
 
@@ -99,7 +61,7 @@ app/src/main/java/
   - `transcriptList: StateFlow<List<Transcript>>` — transcript list (deduplicated/updated by turnId + type)
   - `debugLogList: StateFlow<List<String>>` — debug logs (max 20 entries)
 - Auto flow: joinRTC + loginRTM → both ready → generateToken → startAgent
-- `userId` / `agentUid` randomly generated in companion object, channelName format `channel_kotlin_{random}`
+- `userId` / `agentUid` are randomly generated in the companion object, and `channelName` format is `channel_kotlin_<6-digit-random>`
 
 ### AgentStarter
 
@@ -123,17 +85,11 @@ app/src/main/java/
 ### ConversationalAIAPI
 
 - Wraps RTM message subscription/parsing
-- Event callbacks (`IConversationalAIAPIEventHandler`):
-  - `onAgentStateChanged` — Agent state change
-  - `onTranscriptUpdated` — Transcript content update
-  - `onAgentMetrics` — Performance metrics (LLM/TTS latency, etc.)
-  - `onAgentError` — Agent module error
-  - `onAgentInterrupted` — Agent interrupted
-  - `onMessageError` — Message send error
-  - `onMessageReceiptUpdated` — Message receipt
-  - `onAgentVoiceprintStateChanged` — Voiceprint state change
-  - `onDebugLog` — Debug log
-- Message sending: `chat(agentUserId, TextMessage/ImageMessage)` + `interrupt(agentUserId)`
+- The quickstart currently reacts to:
+  - `onAgentStateChanged`
+  - `onTranscriptUpdated`
+  - `onAgentError` (logged through ViewModel state/logs)
+  - `onDebugLog`
 - Audio settings: `loadAudioSettings(AUDIO_SCENARIO_AI_CLIENT)` (must be called before joinChannel)
 
 ## Configuration
@@ -209,9 +165,9 @@ Token generated via Demo service (must be replaced with your own backend in prod
       "vendor": "aliyun",
       "url": "<LLM_URL>",
       "api_key": "<LLM_API_KEY>",
-      "system_messages": [{ "role": "system", "content": "You are a helpful AI assistant." }],
-      "greeting_message": "Hello! I am your AI assistant. How can I help you?",
-      "failure_message": "I'm sorry, I'm having trouble processing your request.",
+      "system_messages": [{ "role": "system", "content": "你是一名有帮助的 AI 助手。" }],
+      "greeting_message": "你好！我是你的 AI 助手，有什么可以帮你？",
+      "failure_message": "抱歉，我暂时处理不了你的请求，请稍后再试。",
       "params": { "model": "<LLM_MODEL>" }
     },
     "tts": {
@@ -292,47 +248,11 @@ To modify request parameters: edit `buildJsonPayload()` in `AgentStarter.kt`. St
 7. **ConversationalAIAPI is read-only**: All files under `convoaiApi/` are standalone components — **do not modify directly**. To use in other projects, copy the entire `convoaiApi/` directory. See `convoaiApi/README.md` for usage
 8. **Audio Settings**: `loadAudioSettings()` must be called before `joinChannel()`; Avatar mode uses `AUDIO_SCENARIO_DEFAULT`
 
-## Installed Skills
-
-| Skill | Path | Purpose |
-|-------|------|---------|
-| `find-skills` | `.agents/skills/find-skills/` | Search and install open-source agent skills (`npx skills find/add`) |
-| `voice-ai-integration` | `.agents/skills/voice-ai-integration/` | ShengWang product integration: ConvoAI, RTC, RTM, Cloud Recording, Token generation |
-| `update-docs` | `.agents/skills/update-docs/` | Documentation update workflow (Next.js based, for reference only) |
-
 ## File Naming
 
 - Kotlin files: `PascalCase.kt`
 - Resource files: `snake_case.xml`
 - Layout files: `activity_*.xml` / `item_*.xml` / `dialog_*.xml`
-
-## Git Commit Format
-
-```
-<type>(<scope>): <summary>
-```
-
-type: `feat` / `fix` / `docs` / `refactor` / `perf` / `test` / `chore`
-
-## Workflow Guidelines
-
-### State Management
-
-- Maintain `PROJECT_STATE.md` in workflow mode
-- Commit immediately after completing each todo (atomic commits)
-
-### Quality Review
-
-- Review generated code for: logical correctness, type safety, edge cases
-- Pay special attention to: memory leaks (Activity lifecycle), permission handling, thread safety (coroutine Dispatchers)
-
-### Context Management
-
-When exceeding 10 conversation turns or large code changes:
-1. Pause current task
-2. Update PROJECT_STATE.md
-3. Commit all uncommitted changes
-4. Suggest switching to a new conversation
 
 ## Documentation Navigation
 

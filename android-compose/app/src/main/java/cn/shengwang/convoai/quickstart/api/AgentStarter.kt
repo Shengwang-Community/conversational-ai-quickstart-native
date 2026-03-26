@@ -120,11 +120,11 @@ object AgentStarter {
                     put("system_messages", JSONArray().apply {
                         put(JSONObject().apply {
                             put("role", "system")
-                            put("content", "You are a helpful AI assistant.")
+                            put("content", "你是一名有帮助的 AI 助手。")
                         })
                     })
-                    put("greeting_message", "Hello! I am your AI assistant. How can I help you?")
-                    put("failure_message", "I'm sorry, I'm having trouble processing your request.")
+                    put("greeting_message", "你好！我是你的 AI 助手，有什么可以帮你？")
+                    put("failure_message", "抱歉，我暂时处理不了你的请求，请稍后再试。")
                     put("params", JSONObject().apply {
                         put("model", KeyCenter.LLM_MODEL)
                     })

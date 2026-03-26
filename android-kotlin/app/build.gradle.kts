@@ -107,6 +107,8 @@ dependencies {
     implementation(libs.retrofit)
     implementation(libs.converter.gson)
     implementation(libs.gson)
+
+    // Shengwang SDKs
     implementation(libs.shengwang.rtc.full)
     implementation(libs.shengwang.rtm.lite)
     
