@@ -12,9 +12,8 @@
 //    - YOUR_APP_ID_HERE              -> Your Agora App ID
 //    - YOUR_APP_CERTIFICATE_HERE     -> Your Agora App Certificate
 //    - YOUR_LLM_API_KEY_HERE         -> Your LLM provider key
-//    - YOUR_STT_KEY_HERE             -> Your Microsoft STT key
-//    - YOUR_TTS_KEY_HERE             -> Your MiniMax TTS key
-//    - YOUR_TTS_GROUP_ID_HERE        -> Your MiniMax group ID
+//    - YOUR_TTS_BYTEDANCE_APP_ID_HERE -> Your ByteDance TTS App ID
+//    - YOUR_TTS_BYTEDANCE_TOKEN_HERE  -> Your ByteDance TTS token
 //
 // 3. Get your credentials from: https://console.agora.io/
 //
@@ -39,13 +38,7 @@ public:
     static constexpr const char* LLM_URL = "https://api.deepseek.com/v1/chat/completions";
     static constexpr const char* LLM_MODEL = "deepseek-chat";
 
-    // STT - Microsoft Azure
-    static constexpr const char* STT_MICROSOFT_KEY = "YOUR_STT_KEY_HERE";
-    static constexpr const char* STT_MICROSOFT_REGION = "chinaeast2";
-
-    // TTS - MiniMax
-    static constexpr const char* TTS_MINIMAX_KEY = "YOUR_TTS_KEY_HERE";
-    static constexpr const char* TTS_MINIMAX_MODEL = "speech-01-turbo";
-    static constexpr const char* TTS_MINIMAX_VOICE_ID = "male-qn-qingse";
-    static constexpr const char* TTS_MINIMAX_GROUP_ID = "YOUR_TTS_GROUP_ID_HERE";
+    // TTS - Volcengine / ByteDance
+    static constexpr const char* TTS_BYTEDANCE_APP_ID = "YOUR_TTS_BYTEDANCE_APP_ID_HERE";
+    static constexpr const char* TTS_BYTEDANCE_TOKEN = "YOUR_TTS_BYTEDANCE_TOKEN_HERE";
 };

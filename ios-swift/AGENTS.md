@@ -31,19 +31,13 @@ If using a local server, the host must be the IP address of the machine running 
 
 The STT/LLM/TTS vendor configuration lives in two places that must be changed together:
 
-1. `KeyCenter.swift` — API keys and user-configurable IDs (key, region, model, voice_id, group_id)
+1. `KeyCenter.swift` — API keys and user-configurable IDs
 2. `ViewController.swift` → `startAgent()` — the parameter dictionary that specifies vendor names and maps KeyCenter values into the request body
 
 To switch a provider:
-- Change the `"vendor"` value in the `startAgent()` dictionary (e.g., `"microsoft"` → `"deepgram"` for STT)
+- Change the `"vendor"` value in the `startAgent()` dictionary
 - Update the `"params"` sub-dictionary to match the new vendor's required fields
 - Add/update the corresponding API key in `KeyCenter.swift`
-
-Supported STT vendors: `microsoft`, `deepgram`, `ares` (built-in, no key needed)
-
-Supported TTS vendors: `minimax`, `elevenlabs`, `microsoft`, `openai`, `cartesia`
-
-LLM: Any OpenAI-compatible API — change `LLM_URL` and `LLM_MODEL` in `KeyCenter.swift`.
 
 ## How to Change Request Parameters
 

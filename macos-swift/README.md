@@ -60,12 +60,8 @@ pod install
        static let LLM_API_KEY = "your_llm_api_key"
        static let LLM_URL = "https://api.deepseek.com/v1/chat/completions"
        static let LLM_MODEL = "deepseek-chat"
-       static let STT_MICROSOFT_KEY = "your_microsoft_key"
-       static let STT_MICROSOFT_REGION = "chinaeast2"
-       static let TTS_MINIMAX_KEY = "your_minimax_key"
-       static let TTS_MINIMAX_MODEL = "speech-01-turbo"
-       static let TTS_MINIMAX_VOICE_ID = "male-qn-qingse"
-       static let TTS_MINIMAX_GROUP_ID = "your_group_id"
+       static let TTS_BYTEDANCE_APP_ID = "your_bytedance_app_id"
+       static let TTS_BYTEDANCE_TOKEN = "your_bytedance_token"
    }
    ```
 
@@ -73,8 +69,7 @@ pod install
    - `AGORA_APP_ID`：你的 Agora App ID（必需）
    - `AGORA_APP_CERTIFICATE`：你的 App Certificate（必需，用于 Token 生成和 REST 鉴权）
    - `LLM_API_KEY` / `LLM_URL` / `LLM_MODEL`：LLM 配置
-   - `STT_MICROSOFT_KEY` / `STT_MICROSOFT_REGION`：微软语音识别配置
-   - `TTS_MINIMAX_KEY` / `TTS_MINIMAX_MODEL` / `TTS_MINIMAX_VOICE_ID` / `TTS_MINIMAX_GROUP_ID`：MiniMax TTS 配置
+   - `TTS_BYTEDANCE_APP_ID` / `TTS_BYTEDANCE_TOKEN`：火山引擎 / 字节跳动 TTS 配置
 
    **获取方式**：
    - 体验声网对话式 AI 引擎前，你需要先在声网控制台创建项目并开通对话式 AI 引擎服务，获取 App ID 和 App Certificate。[开通服务](https://doc.shengwang.cn/doc/convoai/restful/get-started/enable-service)

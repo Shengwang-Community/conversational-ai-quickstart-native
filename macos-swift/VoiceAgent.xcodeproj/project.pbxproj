@@ -23,6 +23,8 @@
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		AB1B2DA02ECB4AAB007C8776 /* VoiceAgent */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+			);
 			path = VoiceAgent;
 			sourceTree = "<group>";
 		};
@@ -196,13 +198,9 @@
 			inputFileListPaths = (
 				"${PODS_ROOT}/Target Support Files/Pods-VoiceAgent/Pods-VoiceAgent-frameworks-${CONFIGURATION}-input-files.xcfilelist",
 			);
-			inputPaths = (
-			);
 			name = "[CP] Embed Pods Frameworks";
 			outputFileListPaths = (
 				"${PODS_ROOT}/Target Support Files/Pods-VoiceAgent/Pods-VoiceAgent-frameworks-${CONFIGURATION}-output-files.xcfilelist",
-			);
-			outputPaths = (
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;

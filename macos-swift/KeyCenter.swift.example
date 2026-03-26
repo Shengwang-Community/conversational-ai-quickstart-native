@@ -21,13 +21,7 @@ struct KeyCenter {
     static let LLM_URL = "https://api.deepseek.com/v1/chat/completions"
     static let LLM_MODEL = "deepseek-chat"
 
-    // STT - Microsoft Azure
-    static let STT_MICROSOFT_KEY = "YOUR_STT_KEY_HERE"
-    static let STT_MICROSOFT_REGION = "chinaeast2"
-
-    // TTS - MiniMax
-    static let TTS_MINIMAX_KEY = "YOUR_TTS_KEY_HERE"
-    static let TTS_MINIMAX_MODEL = "speech-01-turbo"
-    static let TTS_MINIMAX_VOICE_ID = "male-qn-qingse"
-    static let TTS_MINIMAX_GROUP_ID = "YOUR_TTS_GROUP_ID_HERE"
+    // TTS - Volcengine / ByteDance
+    static let TTS_BYTEDANCE_APP_ID = "YOUR_TTS_BYTEDANCE_APP_ID_HERE"
+    static let TTS_BYTEDANCE_TOKEN = "YOUR_TTS_BYTEDANCE_TOKEN_HERE"
 }

@@ -44,38 +44,35 @@ void AgentManager::StartAgent(
                 {"enable_rtm", true}
             }},
             {"asr", {
-                {"vendor", "microsoft"},
-                {"language", "zh-CN"},
-                {"params", {
-                    {"key", KeyCenter::STT_MICROSOFT_KEY},
-                    {"region", KeyCenter::STT_MICROSOFT_REGION}
-                }}
+                {"vendor", "fengming"},
+                {"language", "zh-CN"}
             }},
             {"llm", {
                 {"url", KeyCenter::LLM_URL},
                 {"api_key", KeyCenter::LLM_API_KEY},
+                {"vendor", "aliyun"},
                 {"system_messages", json::array({
                     {
                         {"role", "system"},
-                        {"content", "You are a helpful AI assistant."}
+                        {"content", "你是一名有帮助的 AI 助手。"}
                     }
                 })},
-                {"greeting_message", "Hello! I am your AI assistant. How can I help you?"},
-                {"failure_message", "I'm sorry, I'm having trouble processing your request."},
+                {"greeting_message", "你好！我是你的 AI 助手，有什么可以帮你？"},
+                {"failure_message", "抱歉，我暂时处理不了你的请求，请稍后再试。"},
                 {"params", {
                     {"model", KeyCenter::LLM_MODEL}
                 }}
             }},
             {"tts", {
-                {"vendor", "minimax"},
+                {"vendor", "bytedance"},
                 {"params", {
-                    {"key", KeyCenter::TTS_MINIMAX_KEY},
-                    {"model", KeyCenter::TTS_MINIMAX_MODEL},
-                    {"voice_setting", {
-                        {"voice_id", KeyCenter::TTS_MINIMAX_VOICE_ID},
-                        {"speed", 1.0}
-                    }},
-                    {"group_id", KeyCenter::TTS_MINIMAX_GROUP_ID}
+                    {"token", KeyCenter::TTS_BYTEDANCE_TOKEN},
+                    {"app_id", KeyCenter::TTS_BYTEDANCE_APP_ID},
+                    {"cluster", "volcano_tts"},
+                    {"voice_type", "BV700_streaming"},
+                    {"speed_ratio", 1.0},
+                    {"volume_ratio", 1.0},
+                    {"pitch_ratio", 1.0}
                 }}
             }},
             {"parameters", {
