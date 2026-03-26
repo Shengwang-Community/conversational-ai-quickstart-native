@@ -12,6 +12,7 @@ Minimal, multi-platform quickstart for building a Conversational AI app with Ago
 
 | Directory | Platform | Language | Details |
 |-----------|----------|----------|---------|
+| [`android-compose/`](./android-compose/README.md) | Android | Kotlin + Compose | [View docs →](./android-compose/README.md) |
 | [`android-kotlin/`](./android-kotlin/README.md) | Android | Kotlin | [View docs →](./android-kotlin/README.md) |
 | [`ios-swift/`](./ios-swift/README.md) | iOS | Swift | [View docs →](./ios-swift/README.md) |
 
@@ -33,6 +34,7 @@ See [LICENSE](./LICENSE).
 
 | 目录 | 平台 | 语言 | 详情 |
 |------|------|------|------|
+| [`android-compose/`](./android-compose/README.md) | Android | Kotlin + Compose | [查看文档 →](./android-compose/README.md) |
 | [`android-kotlin/`](./android-kotlin/README.md) | Android | Kotlin | [查看文档 →](./android-kotlin/README.md) |
 | [`ios-swift/`](./ios-swift/README.md) | iOS | Swift | [查看文档 →](./ios-swift/README.md) |
 

@@ -10,6 +10,7 @@ This repo is meant to be a reference implementation — keep it simple, read the
 
 | Directory | Platform | Language |
 |-----------|----------|----------|
+| `android-compose/` | Android | Kotlin + Compose |
 | `android-kotlin/` | Android | Kotlin |
 | `ios-swift/` | iOS | Swift |
 
