@@ -514,7 +514,7 @@ void CMainFrame::StartAgent()
                         [this](bool ok, const std::string& result) {
                             if (!GetSafeHwnd()) return;
                             if (!ok) {
-                                LogToView(_T("Agent start FAIL"));
+                                LogToView(StringUtils::Utf8ToCString("Agent start FAIL: " + result));
                                 PostMessage(WM_AGENT_START_FAILED, 0, 0);
                                 return;
                             }
@@ -601,6 +601,7 @@ void CMainFrame::onError(int err, const char*)
     CString msg;
     msg.Format(_T("onError code=%d"), err);
     LogToView(msg);
+    UpdateAgentStatus(msg);
 }
 
 // =============================================================================
@@ -662,8 +663,19 @@ void CMainFrame::RtmEventHandler::onPresenceEvent(const PresenceEvent& e)
     }
 }
 
-void CMainFrame::RtmEventHandler::onLinkStateEvent(const LinkStateEvent&) {}
-void CMainFrame::RtmEventHandler::onSubscribeResult(const uint64_t, const char*, agora::rtm::RTM_ERROR_CODE) {}
+void CMainFrame::RtmEventHandler::onLinkStateEvent(const LinkStateEvent& event)
+{
+    CString msg;
+    msg.Format(_T("RTM link state changed: %d"), static_cast<int>(event.currentState));
+    m_frame->LogToView(msg);
+}
+
+void CMainFrame::RtmEventHandler::onSubscribeResult(const uint64_t, const char* channelName, agora::rtm::RTM_ERROR_CODE errorCode)
+{
+    CString msg;
+    msg.Format(_T("RTM subscribe channel=%S result=%d"), channelName ? channelName : "", static_cast<int>(errorCode));
+    m_frame->LogToView(msg);
+}
 
 // =============================================================================
 // ConvoAI Callbacks
@@ -687,6 +699,31 @@ void CMainFrame::OnTranscriptUpdated(const std::string&, const Transcript& trans
 void CMainFrame::OnAgentStateChanged(const std::string&, const StateChangeEvent& event)
 {
     PostMessage(WM_AGENT_STATE_UPDATE, (WPARAM)event.state, 0);
+}
+
+void CMainFrame::OnAgentError(const std::string&, const ModuleError& error)
+{
+    CString msg;
+    msg.Format(_T("onAgentError module=%S code=%d message=%S"),
+        error.module.c_str(),
+        error.code,
+        error.message.c_str());
+    LogToView(msg);
+}
+
+void CMainFrame::OnMessageError(const std::string&, const MessageError& error)
+{
+    CString msg;
+    msg.Format(_T("onMessageError module=%S code=%d message=%S"),
+        error.module.c_str(),
+        error.code,
+        error.message.c_str());
+    LogToView(msg);
+}
+
+void CMainFrame::OnDebugLog(const std::string& log)
+{
+    LogToView(StringUtils::Utf8ToCString(log));
 }
 
 // =============================================================================

@@ -13,6 +13,16 @@
 
 using json = nlohmann::json;
 
+namespace {
+void EmitLog(const std::vector<IConversationalAIAPIEventHandler*>& handlers, const std::string& log) {
+    for (auto handler : handlers) {
+        if (handler) {
+            handler->OnDebugLog(log);
+        }
+    }
+}
+}
+
 // ============================================================================
 // MessageParser Implementation
 // ============================================================================
@@ -146,6 +156,7 @@ ConversationalAIAPI::ConversationalAIAPI()
     : m_hasInterruptEvent(false)
     , m_hasStateChangeEvent(false) {
     LOG_INFO("[ConversationalAIAPI] Initialized");
+    NotifyDebugLog("[ConversationalAIAPI] Initialized");
 }
 
 ConversationalAIAPI::~ConversationalAIAPI() {
@@ -172,6 +183,7 @@ void ConversationalAIAPI::ClearCache() {
     m_hasInterruptEvent = false;
     m_hasStateChangeEvent = false;
     LOG_INFO("[ConversationalAIAPI] Cache cleared");
+    NotifyDebugLog("[ConversationalAIAPI] Cache cleared");
 }
 
 std::string ConversationalAIAPI::GenerateCacheKey(int turnId, TranscriptType type) {
@@ -225,12 +237,20 @@ void ConversationalAIAPI::ParseAndDispatchMessage(const std::string& jsonString,
             HandleInterruptMessage(userId, messageData);
         } else if (messageType == "message.state") {
             HandleStateMessage(userId, messageData);
+        } else if (messageType == "message.error") {
+            std::string rawMessage = "";
+            if (jsonValue.contains("message") && jsonValue["message"].is_string()) {
+                rawMessage = jsonValue["message"].get<std::string>();
+            }
+            HandleErrorMessage(userId, rawMessage, messageData);
         } else {
             LOG_INFO("[ConversationalAIAPI] Unknown message type: " + messageType);
+            NotifyDebugLog("[ConversationalAIAPI] Unknown message type: " + messageType);
         }
 
     } catch (const std::exception& e) {
         LOG_ERROR("[ConversationalAIAPI] Parse error: " + std::string(e.what()));
+        NotifyDebugLog("[ConversationalAIAPI] Parse error: " + std::string(e.what()));
     }
 }
 
@@ -298,6 +318,7 @@ void ConversationalAIAPI::HandleAssistantMessage(const std::string& userId, cons
         
     } catch (const std::exception& e) {
         LOG_ERROR("[ConversationalAIAPI] HandleAssistantMessage error: " + std::string(e.what()));
+        NotifyDebugLog("[ConversationalAIAPI] HandleAssistantMessage error: " + std::string(e.what()));
     }
 }
 
@@ -348,6 +369,7 @@ void ConversationalAIAPI::HandleUserMessage(const std::string& userId, const std
         
     } catch (const std::exception& e) {
         LOG_ERROR("[ConversationalAIAPI] HandleUserMessage error: " + std::string(e.what()));
+        NotifyDebugLog("[ConversationalAIAPI] HandleUserMessage error: " + std::string(e.what()));
     }
 }
 
@@ -372,6 +394,7 @@ void ConversationalAIAPI::HandleInterruptMessage(const std::string& userId, cons
         
     } catch (const std::exception& e) {
         LOG_ERROR("[ConversationalAIAPI] HandleInterruptMessage error: " + std::string(e.what()));
+        NotifyDebugLog("[ConversationalAIAPI] HandleInterruptMessage error: " + std::string(e.what()));
     }
 }
 
@@ -419,6 +442,48 @@ void ConversationalAIAPI::HandleStateMessage(const std::string& userId, const st
         
     } catch (const std::exception& e) {
         LOG_ERROR("[ConversationalAIAPI] HandleStateMessage error: " + std::string(e.what()));
+        NotifyDebugLog("[ConversationalAIAPI] HandleStateMessage error: " + std::string(e.what()));
+    }
+}
+
+void ConversationalAIAPI::HandleErrorMessage(
+    const std::string& userId,
+    const std::string& rawMessage,
+    const std::map<std::string, std::string>& messageData
+) {
+    try {
+        std::string module = "";
+        auto moduleIt = messageData.find("module");
+        if (moduleIt != messageData.end()) {
+            module = moduleIt->second;
+        }
+
+        int code = -1;
+        auto codeIt = messageData.find("code");
+        if (codeIt != messageData.end()) {
+            code = std::stoi(codeIt->second);
+        }
+
+        int64_t timestamp = 0;
+        auto tsIt = messageData.find("send_ts");
+        if (tsIt != messageData.end()) {
+            timestamp = std::stoll(tsIt->second);
+        }
+
+        std::string message = rawMessage.empty() ? "Unknown error" : rawMessage;
+
+        ModuleError agentError(module, code, message, timestamp);
+        LOG_ERROR("[ConversationalAIAPI] message.error module=" + module + ", code=" + std::to_string(code) + ", message=" + message);
+        NotifyDebugLog("[ConversationalAIAPI] message.error module=" + module + ", code=" + std::to_string(code) + ", message=" + message);
+        NotifyAgentError(userId, agentError);
+
+        if (module == "context") {
+            MessageError messageError(module, code, message, timestamp);
+            NotifyMessageError(userId, messageError);
+        }
+    } catch (const std::exception& e) {
+        LOG_ERROR("[ConversationalAIAPI] HandleErrorMessage error: " + std::string(e.what()));
+        NotifyDebugLog("[ConversationalAIAPI] HandleErrorMessage error: " + std::string(e.what()));
     }
 }
 
@@ -436,4 +501,24 @@ void ConversationalAIAPI::NotifyStateChanged(const std::string& agentUserId, con
             handler->OnAgentStateChanged(agentUserId, event);
         }
     }
+}
+
+void ConversationalAIAPI::NotifyAgentError(const std::string& agentUserId, const ModuleError& error) {
+    for (auto handler : m_handlers) {
+        if (handler) {
+            handler->OnAgentError(agentUserId, error);
+        }
+    }
+}
+
+void ConversationalAIAPI::NotifyMessageError(const std::string& agentUserId, const MessageError& error) {
+    for (auto handler : m_handlers) {
+        if (handler) {
+            handler->OnMessageError(agentUserId, error);
+        }
+    }
+}
+
+void ConversationalAIAPI::NotifyDebugLog(const std::string& log) {
+    EmitLog(m_handlers, log);
 }

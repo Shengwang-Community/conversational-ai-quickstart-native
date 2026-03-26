@@ -64,6 +64,28 @@ struct InterruptEvent {
     InterruptEvent(int tid, int64_t ts) : turnId(tid), timestamp(ts) {}
 };
 
+struct MessageError {
+    std::string module;
+    int code;
+    std::string message;
+    int64_t timestamp;
+
+    MessageError() : code(-1), timestamp(0) {}
+    MessageError(const std::string& moduleName, int errorCode, const std::string& errorMessage, int64_t ts)
+        : module(moduleName), code(errorCode), message(errorMessage), timestamp(ts) {}
+};
+
+struct ModuleError {
+    std::string module;
+    int code;
+    std::string message;
+    int64_t timestamp;
+
+    ModuleError() : code(-1), timestamp(0) {}
+    ModuleError(const std::string& moduleName, int errorCode, const std::string& errorMessage, int64_t ts)
+        : module(moduleName), code(errorCode), message(errorMessage), timestamp(ts) {}
+};
+
 // Event Handler Protocol
 
 class IConversationalAIAPIEventHandler {
@@ -71,6 +93,9 @@ public:
     virtual ~IConversationalAIAPIEventHandler() = default;
     virtual void OnAgentStateChanged(const std::string& agentUserId, const StateChangeEvent& event) = 0;
     virtual void OnTranscriptUpdated(const std::string& agentUserId, const Transcript& transcript) = 0;
+    virtual void OnAgentError(const std::string& agentUserId, const ModuleError& error) {}
+    virtual void OnMessageError(const std::string& agentUserId, const MessageError& error) {}
+    virtual void OnDebugLog(const std::string& log) {}
 };
 
 // Message Parser - handles split messages
@@ -125,8 +150,12 @@ private:
     void HandleUserMessage(const std::string& userId, const std::map<std::string, std::string>& messageData);
     void HandleInterruptMessage(const std::string& userId, const std::map<std::string, std::string>& messageData);
     void HandleStateMessage(const std::string& userId, const std::map<std::string, std::string>& messageData);
+    void HandleErrorMessage(const std::string& userId, const std::string& rawMessage, const std::map<std::string, std::string>& messageData);
     void NotifyTranscriptUpdated(const std::string& agentUserId, const Transcript& transcript);
     void NotifyStateChanged(const std::string& agentUserId, const StateChangeEvent& event);
+    void NotifyAgentError(const std::string& agentUserId, const ModuleError& error);
+    void NotifyMessageError(const std::string& agentUserId, const MessageError& error);
+    void NotifyDebugLog(const std::string& log);
     
     // Generate cache key using turnId + type
     std::string GenerateCacheKey(int turnId, TranscriptType type);

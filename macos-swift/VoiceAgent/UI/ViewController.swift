@@ -217,12 +217,17 @@ class ViewController: NSViewController {
     
     private func loginRTM(token: String, completion: @escaping (Bool) -> Void) {
         guard let rtmEngine = rtmEngine else {
+            logToView("RTM login FAIL: engine nil")
             completion(false)
             return
         }
         
-        rtmEngine.login(token) { _, error in
+        logToView("RTM login...")
+        rtmEngine.login(token) { [weak self] _, error in
             DispatchQueue.main.async {
+                if let error = error {
+                    self?.logToView("RTM login FAIL: \(error.localizedDescription)")
+                }
                 completion(error == nil)
             }
         }
@@ -240,7 +245,13 @@ class ViewController: NSViewController {
         
         let api = ConversationalAIAPIImpl(config: config)
         api.addHandler(handler: self)
-        api.subscribeMessage(channelName: channelName) { _ in }
+        api.subscribeMessage(channelName: channelName) { [weak self] error in
+            if let error = error {
+                self?.logToView("RTM subscribe FAIL: \(error.message)")
+            } else {
+                self?.logToView("RTM subscribe OK")
+            }
+        }
         self.convoAIAPI = api
     }
     
@@ -351,7 +362,7 @@ class ViewController: NSViewController {
 
 extension ViewController: AgoraRtmClientDelegate {
     func rtmKit(_ rtmKit: AgoraRtmClientKit, didReceiveLinkStateEvent event: AgoraRtmLinkStateEvent) {
-        // RTM connection state handling if needed
+        logToView("RTM link state: \(event.currentState.rawValue)")
     }
 }
 
@@ -380,6 +391,7 @@ extension ViewController: AgoraRtcEngineDelegate {
     }
     
     func rtcEngine(_ engine: AgoraRtcEngineKit, connectionChangedTo state: AgoraConnectionState, reason: AgoraConnectionChangedReason) {
+        logToView("RTC connectionChanged state=\(state.rawValue) reason=\(reason.rawValue)")
         if state == .disconnected || state == .failed {
             updateAgentStatus("Connection lost")
         }
@@ -423,13 +435,33 @@ extension ViewController: ConversationalAIAPIEventHandler {
         }
     }
     
-    func onAgentVoiceprintStateChanged(agentUserId: String, event: VoiceprintStateChangeEvent) {}
-    func onMessageError(agentUserId: String, error: MessageError) {}
-    func onMessageReceiptUpdated(agentUserId: String, messageReceipt: MessageReceipt) {}
-    func onAgentInterrupted(agentUserId: String, event: InterruptEvent) {}
-    func onAgentMetrics(agentUserId: String, metrics: Metric) {}
-    func onAgentError(agentUserId: String, error: ModuleError) {}
-    func onDebugLog(log: String) {}
+    func onAgentVoiceprintStateChanged(agentUserId: String, event: VoiceprintStateChangeEvent) {
+        logToView("onAgentVoiceprintStateChanged: \(event)")
+    }
+
+    func onMessageError(agentUserId: String, error: MessageError) {
+        logToView("onMessageError: \(error)")
+    }
+
+    func onMessageReceiptUpdated(agentUserId: String, messageReceipt: MessageReceipt) {
+        logToView("onMessageReceiptUpdated: \(messageReceipt)")
+    }
+
+    func onAgentInterrupted(agentUserId: String, event: InterruptEvent) {
+        logToView("onAgentInterrupted: \(event)")
+    }
+
+    func onAgentMetrics(agentUserId: String, metrics: Metric) {
+        logToView("onAgentMetrics: \(metrics)")
+    }
+
+    func onAgentError(agentUserId: String, error: ModuleError) {
+        logToView("onAgentError: \(error)")
+    }
+
+    func onDebugLog(log: String) {
+        logToView(log)
+    }
 }
 
 // MARK: - UI Setup

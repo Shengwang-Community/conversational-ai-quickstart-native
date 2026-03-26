@@ -120,6 +120,9 @@ private:
     // ConvoAI Callbacks
     void OnAgentStateChanged(const std::string& agentUserId, const StateChangeEvent& event) override;
     void OnTranscriptUpdated(const std::string& agentUserId, const Transcript& transcript) override;
+    void OnAgentError(const std::string& agentUserId, const ModuleError& error) override;
+    void OnMessageError(const std::string& agentUserId, const MessageError& error) override;
+    void OnDebugLog(const std::string& log) override;
     
 protected:
     afx_msg int OnCreate(LPCREATESTRUCT lpCreateStruct);
