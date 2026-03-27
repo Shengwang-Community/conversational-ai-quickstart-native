@@ -621,6 +621,7 @@ public class AgentChatViewModel extends ViewModel {
                                                 String.valueOf(agentUid),
                                                 agentToken,
                                                 restAuthToken,
+                                                String.valueOf(userId),
                                                 new AgentStarter.AgentStartCallback() {
                                                     @Override
                                                     public void onSuccess(String agentId) {

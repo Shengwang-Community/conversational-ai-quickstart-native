@@ -391,7 +391,8 @@ class AgentChatViewModel : ViewModel() {
                 channelName = channelName,
                 agentRtcUid = agentUid.toString(),
                 agentToken = agentToken,
-                authToken = restAuthToken
+                authToken = restAuthToken,
+                remoteRtcUid = userId.toString()
             ).fold(
                 onSuccess = { startedAgentId ->
                     agentId = startedAgentId

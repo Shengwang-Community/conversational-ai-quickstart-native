@@ -110,9 +110,9 @@ TTS_BYTEDANCE_TOKEN=your_bytedance_access_token
 
 - `advanced_features.enable_rtm = true`
 - `parameters.data_channel = "rtm"`
-- `enable_string_uid = true`
+- `enable_string_uid = false`
 - `idle_timeout = 120`
-- `remote_rtc_uids = ["*"]`
+- `remote_rtc_uids = ["<currentUserUid>"]`
 
 ## 测试验证
 

@@ -87,8 +87,8 @@ For runtime structure, see `ARCHITECTURE.md`. For entry files, see `README.md`.
   - STT: Fengming ASR
   - LLM: 阿里云百炼千问（DashScope OpenAI-compatible endpoint）
   - TTS: 火山引擎（token + app_id + cluster + voice_type）
-  - Advanced features: `enable_rtm: true`, `data_channel: "rtm"`, `enable_string_uid: true`, `idle_timeout: 120`
-  - Remote UIDs: `remote_rtc_uids: ["*"]`
+  - Advanced features: `enable_rtm: true`, `data_channel: "rtm"`, `enable_string_uid: false`, `idle_timeout: 120`
+  - Remote UIDs: `remote_rtc_uids: ["<currentUserUid>"]`
 - `stopAgentAsync()`: POST `/agents/{agentId}/leave`
 - Authentication: `Authorization: agora token=<authToken>`
 
@@ -175,8 +175,8 @@ Token generated via Demo service (must be replaced with your own backend in prod
     "channel": "<channelName>",
     "token": "<agentToken>",
     "agent_rtc_uid": "<agentRtcUid>",
-    "remote_rtc_uids": ["*"],
-    "enable_string_uid": true,
+    "remote_rtc_uids": ["<currentUserUid>"],
+    "enable_string_uid": false,
     "idle_timeout": 120,
     "advanced_features": { "enable_rtm": true },
     "asr": {
@@ -220,6 +220,18 @@ User Action → Compose UI → ViewModel → ShengWang SDK (RTC/RTM)
 ```
 
 ## Event Flow
+
+### Startup Flow
+
+1. User taps Start Agent → check microphone permission
+2. Generate userToken (unified for RTC+RTM, channelName is empty string, uid=userId)
+3. Parallel: join RTC channel + login RTM (both use the same userToken)
+4. Both ready → subscribeMessage(channelName) → generate agentToken + authToken (uid=agentUid, channelName=current channel)
+5. Call `AgentStarter.startAgentAsync(channelName, agentRtcUid, agentToken, authToken, remoteRtcUid)` to start Agent, where `remoteRtcUid` is the current user RTC UID
+6. ConversationalAIAPI receives Agent events via RTM → update StateFlow / SharedFlow → UI responds
+7. User taps Stop → unsubscribeMessage → `AgentStarter.stopAgentAsync(agentId, authToken)` → leave RTC → clean up state
+
+### Runtime Callback Flow
 
 ```text
 RTM message → ConversationalAIAPI → EventHandler callbacks
