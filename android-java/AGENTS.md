@@ -78,8 +78,8 @@ For runtime structure, see `ARCHITECTURE.md`. For entry files, see `README.md`.
   - ASR: Fengming
   - LLM: Aliyun / Qwen-compatible endpoint
   - TTS: ByteDance / Volcengine
-  - Advanced fields: `enable_rtm: true`, `data_channel: "rtm"`, `enable_string_uid: true`, `idle_timeout: 120`
-  - Remote UIDs: `remote_rtc_uids: ["*"]`
+  - Advanced fields: `enable_rtm: true`, `data_channel: "rtm"`, `enable_string_uid: false`, `idle_timeout: 120`
+  - Remote UIDs: `remote_rtc_uids: ["<currentUserUid>"]`
 - `stopAgentAsync()` sends `POST /agents/{agentId}/leave`
 - Authentication: `Authorization: agora token=<authToken>`
 
@@ -161,8 +161,8 @@ Demo token service endpoint:
     "channel": "<channelName>",
     "token": "<agentToken>",
     "agent_rtc_uid": "<agentRtcUid>",
-    "remote_rtc_uids": ["*"],
-    "enable_string_uid": true,
+    "remote_rtc_uids": ["<currentUserUid>"],
+    "enable_string_uid": false,
     "idle_timeout": 120,
     "advanced_features": { "enable_rtm": true },
     "asr": {
@@ -194,6 +194,16 @@ Demo token service endpoint:
   }
 }
 ```
+
+## Event Flow
+
+1. User taps Start Agent → check microphone permission
+2. Generate userToken (unified for RTC+RTM, channelName is empty string, uid=userId)
+3. Parallel: join RTC channel + login RTM (both use the same userToken)
+4. Both ready → subscribeMessage(channelName) → generate agentToken + authToken (uid=agentUid, channelName=current channel)
+5. Call `AgentStarter.startAgentAsync(channelName, agentRtcUid, agentToken, authToken, remoteRtcUid)` to start Agent, where `remoteRtcUid` is the current user RTC UID
+6. ConversationalAIAPI receives Agent events via RTM → update ViewModel state → Activity / UI responds
+7. User taps Stop → unsubscribeMessage → `AgentStarter.stopAgentAsync(agentId, authToken)` → leave RTC → clean up state
 
 ## Key Constraints
 

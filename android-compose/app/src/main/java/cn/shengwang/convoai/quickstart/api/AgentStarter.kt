@@ -35,13 +35,15 @@ object AgentStarter {
      * @param agentRtcUid Agent RTC UID
      * @param agentToken Token for the agent to join the RTC channel
      * @param authToken Agora token for REST API authorization
+     * @param remoteRtcUid Current user RTC UID that the agent should subscribe to
      * @return Result containing agentId or exception
      */
     suspend fun startAgentAsync(
         channelName: String,
         agentRtcUid: String,
         agentToken: String,
-        authToken: String
+        authToken: String,
+        remoteRtcUid: String
     ): Result<String> = withContext(Dispatchers.IO) {
         try {
             val projectId = KeyCenter.APP_ID
@@ -52,7 +54,7 @@ object AgentStarter {
                 channel = channelName,
                 agentRtcUid = agentRtcUid,
                 token = agentToken,
-                remoteRtcUids = listOf("*")
+                remoteRtcUids = listOf(remoteRtcUid)
             )
 
             val request = Request.Builder()
@@ -101,7 +103,7 @@ object AgentStarter {
                 put("token", token)
                 put("agent_rtc_uid", agentRtcUid)
                 put("remote_rtc_uids", JSONArray(remoteRtcUids))
-                put("enable_string_uid", true)
+                put("enable_string_uid", false)
                 put("idle_timeout", 120)
 
                 put("advanced_features", JSONObject().apply {

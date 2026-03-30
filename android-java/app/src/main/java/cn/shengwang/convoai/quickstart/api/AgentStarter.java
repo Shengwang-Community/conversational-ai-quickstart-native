@@ -38,6 +38,7 @@ public class AgentStarter {
      * @param agentRtcUid Agent RTC UID
      * @param agentToken Token for the agent to join the RTC channel
      * @param authToken Agora token for REST API authorization
+     * @param remoteRtcUid Current user RTC UID that the agent should subscribe to
      * @param callback Callback for result
      */
     public static void startAgentAsync(
@@ -45,6 +46,7 @@ public class AgentStarter {
         String agentRtcUid,
         String agentToken,
         String authToken,
+        String remoteRtcUid,
         AgentStartCallback callback
     ) {
         executorService.execute(() -> {
@@ -57,7 +59,7 @@ public class AgentStarter {
                     channelName,
                     agentRtcUid,
                     agentToken,
-                    Collections.singletonList("*")
+                    Collections.singletonList(remoteRtcUid)
                 );
 
                 Request request = new Request.Builder()
@@ -97,11 +99,19 @@ public class AgentStarter {
 
     public static void startAgentAsync(
         String channelName,
+        String remoteRtcUid,
         String agentToken,
         String authToken,
         AgentStartCallback callback
     ) {
-        startAgentAsync(channelName, DEFAULT_AGENT_RTC_UID, agentToken, authToken, callback);
+        startAgentAsync(
+            channelName,
+            DEFAULT_AGENT_RTC_UID,
+            agentToken,
+            authToken,
+            remoteRtcUid,
+            callback
+        );
     }
 
     private static JSONObject buildJsonPayload(
@@ -118,7 +128,7 @@ public class AgentStarter {
                 .put("token", token)
                 .put("agent_rtc_uid", agentRtcUid)
                 .put("remote_rtc_uids", new JSONArray(remoteRtcUids))
-                .put("enable_string_uid", true)
+                .put("enable_string_uid", false)
                 .put("idle_timeout", 120)
                 .put("advanced_features", new JSONObject()
                     .put("enable_rtm", true))
