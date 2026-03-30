@@ -5,38 +5,17 @@ class KeyCenter {
       'https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions';
   static const String _defaultLlmModel = 'qwen-plus';
 
-  static String appId = const String.fromEnvironment(
-    'AGORA_APP_ID',
-    defaultValue: '',
-  );
-  static String appCertificate = const String.fromEnvironment(
-    'AGORA_APP_CERTIFICATE',
-    defaultValue: '',
-  );
-  static String llmApiKey = const String.fromEnvironment(
-    'LLM_API_KEY',
-    defaultValue: '',
-  );
-  static String llmUrl = const String.fromEnvironment(
-    'LLM_URL',
-    defaultValue: _defaultLlmUrl,
-  );
-  static String llmModel = const String.fromEnvironment(
-    'LLM_MODEL',
-    defaultValue: _defaultLlmModel,
-  );
-  static String ttsBytedanceAppId = const String.fromEnvironment(
-    'TTS_BYTEDANCE_APP_ID',
-    defaultValue: '',
-  );
-  static String ttsBytedanceToken = const String.fromEnvironment(
-    'TTS_BYTEDANCE_TOKEN',
-    defaultValue: '',
-  );
+  static String appId = '';
+  static String appCertificate = '';
+  static String llmApiKey = '';
+  static String llmUrl = _defaultLlmUrl;
+  static String llmModel = _defaultLlmModel;
+  static String ttsBytedanceAppId = '';
+  static String ttsBytedanceToken = '';
 
   static Future<void> load() async {
     try {
-      final content = await rootBundle.loadString('assets/env.properties');
+      final content = await rootBundle.loadString('assets/.env');
       final lines = content.split(RegExp(r'\r?\n'));
       for (final raw in lines) {
         final line = raw.trim();
@@ -77,7 +56,7 @@ class KeyCenter {
         }
       }
     } catch (_) {
-      // keep dart-define values as fallback
+      // keep default values when .env is missing
     }
   }
 }

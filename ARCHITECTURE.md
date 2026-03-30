@@ -21,7 +21,7 @@ Each platform directory owns its own `README.md`, `AGENTS.md`, `ARCHITECTURE.md`
 | Concern | Android Compose | Android Java | Android Kotlin | Flutter | iOS |
 |---------|-----------------|--------------|----------------|---------|-----|
 | Build config / dependencies | `app/build.gradle.kts` | `app/build.gradle` | `app/build.gradle.kts` | `pubspec.yaml` + native `android/` / `ios/` configs | `Podfile` |
-| Credentials & provider config | `KeyCenter.kt` + `env.properties` | `KeyCenter.java` + `env.properties` | `KeyCenter.kt` + `env.properties` | `assets/env.properties` + `lib/services/keycenter.dart` | `KeyCenter.swift` |
+| Credentials & provider config | `KeyCenter.kt` + `env.properties` | `KeyCenter.java` + `env.properties` | `KeyCenter.kt` + `env.properties` | `assets/.env` + `lib/services/keycenter.dart` | `KeyCenter.swift` |
 | Connection flow & lifecycle | `AgentChatViewModel.kt` | `AgentChatViewModel.java` | `AgentChatViewModel.kt` | `lib/agent_chat_page.dart` | `ViewController.swift` |
 | Agent start/stop REST API | `AgentStarter.kt` | `AgentStarter.java` | `AgentStarter.kt` | `lib/services/agent_starter.dart` | `AgentManager.swift` |
 | Token generation (demo only) | `TokenGenerator.kt` | `TokenGenerator.java` | `TokenGenerator.kt` | `lib/services/token_generator.dart` | `NetworkManager.swift` |

@@ -53,13 +53,13 @@ lib/
 └── services/
     ├── agent_event_parser.dart   # RTM presence / error message parsing
     ├── agent_starter.dart        # Agent start/stop REST API wrapper
-    ├── keycenter.dart            # env.properties / dart-define config loader
+    ├── keycenter.dart            # .env config loader
     ├── permission_service.dart   # Microphone permission helper
     ├── token_generator.dart      # Demo RTC/RTM/auth token generator
     └── transcript_manager.dart   # Transcript parsing and upsert logic
 
 assets/
-└── env.example.properties        # Example configuration template
+└── .env.example                  # Example configuration template
 
 android/
 └── app/src/main/kotlin/cn/shengwang/convoai/quickstart/flutter/MainActivity.kt
@@ -187,7 +187,7 @@ Additional behavior:
 ## Config Contract
 
 ```text
-assets/env.properties / --dart-define
+assets/.env
   → KeyCenter
   → TokenGenerator / AgentStarter / AgentChatPage
 ```

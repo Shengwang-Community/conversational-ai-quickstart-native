@@ -53,13 +53,13 @@ cd conversational-ai-quickstart-native/flutter
 
 2. **配置 Flutter 项目**：
 
-复制 `assets/env.example.properties` 为 `assets/env.properties`：
+复制 `assets/.env.example` 为 `assets/.env`：
 
 ```bash
-cp assets/env.example.properties assets/env.properties
+cp assets/.env.example assets/.env
 ```
 
-编辑 `assets/env.properties`，填入你的实际配置值：
+编辑 `assets/.env`，填入你的实际配置值：
 
 ```properties
 APP_ID=your_shengwang_app_id
@@ -89,28 +89,15 @@ TTS_BYTEDANCE_TOKEN=your_bytedance_access_token
 
 **注意**：
 
-- `assets/env.properties` 已在 `.gitignore` 中忽略，请不要提交真实凭证
-- 应用启动时会优先读取 `assets/env.properties`；如果文件不存在，则回退到 `--dart-define`
+- `assets/.env` 已在 `.gitignore` 中忽略，请不要提交真实凭证
+- 应用启动时会读取 `assets/.env`
 - 当前 Demo 中：
   - `userUid` 每次启动随机生成 6 位整数
   - `agentUid` 每次启动随机生成 6 位整数，且不会与 `userUid` 冲突
   - `channelName` 每次启动自动生成，格式为 `channel_kotlin_<6位随机数>`
 - ⚠️ **重要**：`lib/services/token_generator.dart` 中的 Token 生成逻辑仅用于演示和开发测试，**生产环境必须改为服务端生成**
 
-3. **可选：使用 `--dart-define` 代替本地配置文件**：
-
-如果你不想创建 `assets/env.properties`，也可以直接运行：
-
-```bash
-flutter run \
-  --dart-define=AGORA_APP_ID=your_shengwang_app_id \
-  --dart-define=AGORA_APP_CERTIFICATE=your_shengwang_app_certificate \
-  --dart-define=LLM_API_KEY=sk-your_dashscope_api_key \
-  --dart-define=TTS_BYTEDANCE_APP_ID=your_bytedance_app_id \
-  --dart-define=TTS_BYTEDANCE_TOKEN=your_bytedance_access_token
-```
-
-4. **安装依赖并运行**：
+3. **安装依赖并运行**：
 
 ```bash
 flutter pub get
@@ -136,7 +123,7 @@ flutter create --platforms=android,ios .
 
 **使用前提**：
 
-- 确保已正确配置 `assets/env.properties` 或 `--dart-define`
+- 确保已正确配置 `assets/.env`
 - 确保控制台已启用 `App Certificate`
 
 **适用场景**：
@@ -215,7 +202,7 @@ flutter create --platforms=android,ios .
 
 - `lib/main.dart`：应用入口，负责加载配置并初始化主题
 - `lib/agent_chat_page.dart`：主页面，包含 RTC/RTM 生命周期、页面状态、控制按钮和 UI 渲染
-- `lib/services/keycenter.dart`：配置加载，优先读取 `assets/env.properties`，缺失时回退到 `--dart-define`
+- `lib/services/keycenter.dart`：配置加载，读取 `assets/.env`
 - `lib/services/agent_starter.dart`：Agent 启停 API 封装，内联默认 `asr / llm / tts` 配置，并对日志做脱敏
 - `lib/services/token_generator.dart`：通过演示服务生成 RTC / RTM / REST 所需 Token
 - `lib/services/agent_event_parser.dart`：解析 RTM presence 与 `message.error`

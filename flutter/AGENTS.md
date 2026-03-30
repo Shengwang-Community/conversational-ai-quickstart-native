@@ -25,14 +25,14 @@ flutter create --platforms=android,ios .
 
 The STT/LLM/TTS vendor configuration lives in two places that must be changed together:
 
-1. `lib/services/keycenter.dart` — reads credentials from `assets/env.properties` and falls back to `--dart-define`
+1. `lib/services/keycenter.dart` — reads credentials from `assets/.env`
 2. `lib/services/agent_starter.dart` → `_buildJsonPayload()` — the JSON builder that specifies vendor names and maps `KeyCenter` values into the request body
 
 To switch a provider:
 
 - Change the `"vendor"` value in `_buildJsonPayload()`
 - Update the corresponding `"params"` sub-object to match the new vendor's required fields
-- Add or update the matching values in `assets/env.properties`
+- Add or update the matching values in `assets/.env`
 - If the new provider needs extra config keys, add them to both `KeyCenter` parsing and the example env file
 
 Supported vendors for STT/TTS/LLM change over time. Refer to the [创建对话式智能体 API 文档](https://doc.shengwang.cn/doc/convoai/restful/convoai/operations/start-agent) for the latest supported vendors and required parameters.
@@ -61,7 +61,7 @@ Current quickstart scope is limited to voice session startup, transcript display
 | RTC SDK | ShengWang RTC SDK (`agora_rtc_engine` 6.x) |
 | RTM SDK | ShengWang RTM SDK (`agora_rtm` 2.2.6) |
 | Permissions | `permission_handler` (11.x) |
-| Config Loading | `rootBundle` + `String.fromEnvironment` fallback |
+| Config Loading | `rootBundle` |
 
 For runtime structure, see `ARCHITECTURE.md`. For entry files, see `README.md`.
 
@@ -134,7 +134,7 @@ For runtime structure, see `ARCHITECTURE.md`. For entry files, see `README.md`.
 ### Configuration Flow
 
 ```text
-assets/env.properties / --dart-define
+assets/.env
   → KeyCenter
   → TokenGenerator / AgentStarter / AgentChatPage
 ```
@@ -153,7 +153,7 @@ Unlike the Android Kotlin version, Flutter currently does not fail the build on 
 | `TTS_BYTEDANCE_APP_ID` | Volcengine TTS App ID | yes | — |
 | `TTS_BYTEDANCE_TOKEN` | Volcengine TTS access token | yes | — |
 
-`KeyCenter` also accepts legacy-style keys such as `agora.appId`, `agora.appCertificate`, and similar variants from the same `env.properties` file.
+`KeyCenter` also accepts legacy-style keys such as `agora.appId`, `agora.appCertificate`, and similar variants from the same `.env` file.
 
 ### APP_CERTIFICATE Must Be Enabled
 
@@ -162,7 +162,7 @@ This project uses HTTP token auth (`Authorization: agora token=<token>`) for RES
 Make sure to:
 
 1. Enable the primary certificate for your App ID in the [ShengWang Console](https://console.shengwang.cn/)
-2. Fill in the certificate value in `assets/env.properties` under `APP_CERTIFICATE`
+2. Fill in the certificate value in `assets/.env` under `APP_CERTIFICATE`
 
 ## API Endpoints
 
