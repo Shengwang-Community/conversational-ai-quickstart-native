@@ -15,6 +15,7 @@ Minimal, multi-platform quickstart for building a Conversational AI app with Ago
 | [`android-compose/`](./android-compose/README.md) | Android | Kotlin + Compose | [View docs →](./android-compose/README.md) |
 | [`android-java/`](./android-java/README.md) | Android | Java | [View docs →](./android-java/README.md) |
 | [`android-kotlin/`](./android-kotlin/README.md) | Android | Kotlin | [View docs →](./android-kotlin/README.md) |
+| [`flutter/`](./flutter/README.md) | Android / iOS | Dart + Flutter | [View docs →](./flutter/README.md) |
 | [`ios-swift/`](./ios-swift/README.md) | iOS | Swift | [View docs →](./ios-swift/README.md) |
 
 ### Getting Started
@@ -38,6 +39,7 @@ See [LICENSE](./LICENSE).
 | [`android-compose/`](./android-compose/README.md) | Android | Kotlin + Compose | [查看文档 →](./android-compose/README.md) |
 | [`android-java/`](./android-java/README.md) | Android | Java | [查看文档 →](./android-java/README.md) |
 | [`android-kotlin/`](./android-kotlin/README.md) | Android | Kotlin | [查看文档 →](./android-kotlin/README.md) |
+| [`flutter/`](./flutter/README.md) | Android / iOS | Dart + Flutter | [查看文档 →](./flutter/README.md) |
 | [`ios-swift/`](./ios-swift/README.md) | iOS | Swift | [查看文档 →](./ios-swift/README.md) |
 
 ### 快速开始
