@@ -54,7 +54,6 @@ public class NetworkManager:NSObject {
                        expire: Int = 86400,
                        types: [AgoraTokenType],
                        success: @escaping (String?) -> Void) {
-        let date = Date()
         let params = ["appCertificate": KeyCenter.AG_APP_CERTIFICATE,
                       "appId": KeyCenter.AG_APP_ID,
                       "channelName": channelName,
@@ -68,11 +67,9 @@ public class NetworkManager:NSObject {
                                           params: params) { response in
             let data = response["data"] as? [String: String]
             let token = data?["token"] as? String
-            print("generateToken[\(types)] cost: \(Int64(-date.timeIntervalSinceNow * 1000)) ms")
-            print(response)
             success(token)
         } failure: { error in
-            print(error)
+            print("[NetworkManager] generateToken failed: \(error)")
             success(nil)
         }
        
@@ -157,12 +154,6 @@ public class NetworkManager:NSObject {
         body.append("--\(boundary)--\r\n".data(using: .utf8)!)
         
         request.httpBody = body
-        
-        #if DEBUG
-        let curl = request.cURL(pretty: false)
-        debugPrint("upload curl == \(curl)")
-        #endif
-        
         // Use existing sessionConfig with longer timeout for uploads
         let config = sessionConfig
         config.timeoutIntervalForRequest = 60 // Longer timeout for uploads
@@ -231,10 +222,6 @@ public class NetworkManager:NSObject {
                                                            options: .sortedKeys)
         }
         
-        #if DEBUG
-        let curl = request.cURL(pretty: false)
-        debugPrint("curl == \(curl)")
-        #endif
         return request
     }
 

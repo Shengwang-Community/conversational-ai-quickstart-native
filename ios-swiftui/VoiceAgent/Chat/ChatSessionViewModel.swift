@@ -33,11 +33,13 @@ class ChatSessionViewModel: NSObject, ObservableObject {
 
     override init() {
         super.init()
+        addDebugMessage("Session controller initialized")
         initializeEngines()
     }
 
     private func addDebugMessage(_ message: String) {
         let timestamp = DateFormatter.localizedString(from: Date(), dateStyle: .none, timeStyle: .medium)
+        print("[VoiceAgent] \(message)")
         DispatchQueue.main.async {
             self.debugMessages += "[\(timestamp)] \(message)\n"
         }
@@ -66,9 +68,9 @@ class ChatSessionViewModel: NSObject, ObservableObject {
 
         do {
             self.rtmEngine = try AgoraRtmClientKit(config, delegate: self)
-            addDebugMessage("RTM Client 初始化成功")
+            addDebugMessage("RTM client initialized")
         } catch {
-            addDebugMessage("RTM Client 初始化失败: \(error.localizedDescription)")
+            addDebugMessage("RTM client initialization failed: \(error.localizedDescription)")
         }
     }
 
@@ -82,21 +84,30 @@ class ChatSessionViewModel: NSObject, ObservableObject {
         engine.enableAudioVolumeIndication(100, smooth: 3, reportVad: false)
         engine.setParameters("{\"che.audio.enable.predump\":{\"enable\":\"true\",\"duration\":\"60\"}}")
         self.rtcEngine = engine
-        addDebugMessage("RTC Engine 初始化成功")
+        addDebugMessage("RTC engine initialized")
     }
 
     private func initializeConvoAIAPI() {
-        guard let rtcEngine, let rtmEngine else { return }
-        let config = ConversationalAIAPIConfig(rtcEngine: rtcEngine, rtmEngine: rtmEngine, renderMode: .words, enableLog: true)
+        guard let rtcEngine else {
+            addDebugMessage("ConvoAI API initialization failed: RTC engine is not initialized")
+            return
+        }
+        guard let rtmEngine else {
+            addDebugMessage("ConvoAI API initialization failed: RTM engine is not initialized")
+            return
+        }
+        let config = ConversationalAIAPIConfig(rtcEngine: rtcEngine, rtmEngine: rtmEngine, renderMode: .words, enableLog: false)
         let api = ConversationalAIAPIImpl(config: config)
         api.addHandler(handler: self)
         self.convoAIAPI = api
+        addDebugMessage("ConvoAI API initialized")
     }
 
     func startConnection() {
         channel = randomChannelName()
         isLoading = true
         isError = false
+        addDebugMessage("Starting session connection")
 
         Task {
             do {
@@ -124,46 +135,48 @@ class ChatSessionViewModel: NSObject, ObservableObject {
     }
 
     private func generateUserToken() async throws {
-        addDebugMessage("获取 Token 调用中...")
+        addDebugMessage("Requesting user token...")
         return try await withCheckedThrowingContinuation { continuation in
             NetworkManager.shared.generateToken(channelName: "", uid: "\(uid)", types: [.rtc, .rtm]) { token in
                 guard let token else {
-                    self.addDebugMessage("获取 Token 调用失败")
-                    continuation.resume(throwing: NSError(domain: "generateUserToken", code: -1, userInfo: [NSLocalizedDescriptionKey: "获取 token 失败"]))
+                    self.addDebugMessage("User token request failed")
+                    continuation.resume(throwing: NSError(domain: "generateUserToken", code: -1, userInfo: [NSLocalizedDescriptionKey: "Failed to get user token"]))
                     return
                 }
                 self.userToken = token
-                self.addDebugMessage("获取 Token 调用成功")
+                self.addDebugMessage("User token request succeeded")
                 continuation.resume()
             }
         }
     }
 
     private func generateAgentToken() async throws {
+        addDebugMessage("Requesting agent token...")
         return try await withCheckedThrowingContinuation { continuation in
             NetworkManager.shared.generateToken(channelName: channel, uid: "\(agentUid)", types: [.rtc, .rtm]) { token in
                 guard let token else {
-                    self.addDebugMessage("Agent Token 调用失败")
-                    continuation.resume(throwing: NSError(domain: "generateAgentToken", code: -1, userInfo: [NSLocalizedDescriptionKey: "获取 agent token 失败"]))
+                    self.addDebugMessage("Agent token request failed")
+                    continuation.resume(throwing: NSError(domain: "generateAgentToken", code: -1, userInfo: [NSLocalizedDescriptionKey: "Failed to get agent token"]))
                     return
                 }
                 self.agentToken = token
-                self.addDebugMessage("Agent Token 调用成功")
+                self.addDebugMessage("Agent token request succeeded")
                 continuation.resume()
             }
         }
     }
 
     private func generateAuthToken() async throws {
+        addDebugMessage("Requesting auth token...")
         return try await withCheckedThrowingContinuation { continuation in
             NetworkManager.shared.generateToken(channelName: channel, uid: "\(agentUid)", types: [.rtc, .rtm]) { token in
                 guard let token else {
-                    self.addDebugMessage("Auth Token 调用失败")
-                    continuation.resume(throwing: NSError(domain: "generateAuthToken", code: -1, userInfo: [NSLocalizedDescriptionKey: "获取 auth token 失败"]))
+                    self.addDebugMessage("Auth token request failed")
+                    continuation.resume(throwing: NSError(domain: "generateAuthToken", code: -1, userInfo: [NSLocalizedDescriptionKey: "Failed to get auth token"]))
                     return
                 }
                 self.authToken = token
-                self.addDebugMessage("Auth Token 调用成功")
+                self.addDebugMessage("Auth token request succeeded")
                 continuation.resume()
             }
         }
@@ -172,16 +185,16 @@ class ChatSessionViewModel: NSObject, ObservableObject {
     @MainActor
     private func loginRTM() async throws {
         guard let rtmEngine else {
-            throw NSError(domain: "loginRTM", code: -1, userInfo: [NSLocalizedDescriptionKey: "RTM engine 未初始化"])
+            throw NSError(domain: "loginRTM", code: -1, userInfo: [NSLocalizedDescriptionKey: "RTM engine is not initialized"])
         }
-        addDebugMessage("RTM Login 调用中...")
+        addDebugMessage("RTM login in progress...")
         return try await withCheckedThrowingContinuation { continuation in
             rtmEngine.login(userToken) { _, error in
                 if let error {
-                    self.addDebugMessage("RTM Login 调用失败: \(error.localizedDescription)")
+                    self.addDebugMessage("RTM login failed: \(error.localizedDescription)")
                     continuation.resume(throwing: error)
                 } else {
-                    self.addDebugMessage("RTM Login 调用成功")
+                    self.addDebugMessage("RTM login succeeded")
                     continuation.resume()
                 }
             }
@@ -191,9 +204,9 @@ class ChatSessionViewModel: NSObject, ObservableObject {
     @MainActor
     private func joinRTCChannel() async throws {
         guard let rtcEngine else {
-            throw NSError(domain: "joinRTCChannel", code: -1, userInfo: [NSLocalizedDescriptionKey: "RTC engine 未初始化"])
+            throw NSError(domain: "joinRTCChannel", code: -1, userInfo: [NSLocalizedDescriptionKey: "RTC engine is not initialized"])
         }
-        addDebugMessage("joinChannel 调用中...")
+        addDebugMessage("joinChannel in progress...")
         let options = AgoraRtcChannelMediaOptions()
         options.clientRoleType = .broadcaster
         options.publishMicrophoneTrack = true
@@ -202,24 +215,25 @@ class ChatSessionViewModel: NSObject, ObservableObject {
         options.autoSubscribeVideo = true
         let result = rtcEngine.joinChannel(byToken: userToken, channelId: channel, uid: UInt(uid), mediaOptions: options)
         guard result == 0 else {
-            addDebugMessage("joinChannel 调用失败: ret=\(result)")
-            throw NSError(domain: "joinRTCChannel", code: Int(result), userInfo: [NSLocalizedDescriptionKey: "加入 RTC 频道失败"])
+            addDebugMessage("joinChannel failed: ret=\(result)")
+            throw NSError(domain: "joinRTCChannel", code: Int(result), userInfo: [NSLocalizedDescriptionKey: "Failed to join RTC channel"])
         }
-        addDebugMessage("joinChannel 调用成功: ret=\(result)")
+        addDebugMessage("joinChannel succeeded")
     }
 
     @MainActor
     private func subscribeConvoAIMessage() async throws {
         guard let convoAIAPI else {
-            throw NSError(domain: "subscribeConvoAIMessage", code: -1, userInfo: [NSLocalizedDescriptionKey: "ConvoAI API 未初始化"])
+            throw NSError(domain: "subscribeConvoAIMessage", code: -1, userInfo: [NSLocalizedDescriptionKey: "ConvoAI API is not initialized"])
         }
+        addDebugMessage("Subscribing to ConvoAI...")
         return try await withCheckedThrowingContinuation { continuation in
             convoAIAPI.subscribeMessage(channelName: channel) { error in
                 if let error {
-                    self.addDebugMessage("订阅消息失败: \(error.message)")
+                    self.addDebugMessage("ConvoAI subscription failed: \(error.message)")
                     continuation.resume(throwing: NSError(domain: "subscribeConvoAIMessage", code: error.code, userInfo: [NSLocalizedDescriptionKey: error.message]))
                 } else {
-                    self.addDebugMessage("订阅消息成功")
+                    self.addDebugMessage("ConvoAI subscribed")
                     continuation.resume()
                 }
             }
@@ -277,20 +291,20 @@ class ChatSessionViewModel: NSObject, ObservableObject {
     }
 
     private func startAgent() async throws {
-        addDebugMessage("Agent Start 调用中...")
+        addDebugMessage("Agent start in progress...")
         return try await withCheckedThrowingContinuation { continuation in
             AgentManager.startAgent(parameter: startAgentParameter(), token: authToken) { agentId, error in
                 if let error {
-                    self.addDebugMessage("Agent Start 调用失败: \(error.localizedDescription)")
+                    self.addDebugMessage("Agent start failed: \(error.localizedDescription)")
                     continuation.resume(throwing: error)
                     return
                 }
                 guard let agentId else {
-                    continuation.resume(throwing: NSError(domain: "startAgent", code: -1, userInfo: [NSLocalizedDescriptionKey: "未返回 agentId"]))
+                    continuation.resume(throwing: NSError(domain: "startAgent", code: -1, userInfo: [NSLocalizedDescriptionKey: "Agent start failed: missing agentId"]))
                     return
                 }
                 self.agentId = agentId
-                self.addDebugMessage("Agent Start 调用成功 (agentId: \(agentId))")
+                self.addDebugMessage("Agent start succeeded (agentId: \(agentId))")
                 continuation.resume()
             }
         }
@@ -302,18 +316,27 @@ class ChatSessionViewModel: NSObject, ObservableObject {
     }
 
     func endCall() {
+        addDebugMessage("Starting session shutdown")
         if !agentId.isEmpty && !authToken.isEmpty {
-            AgentManager.stopAgent(agentId: agentId, token: authToken, completion: nil)
+            AgentManager.stopAgent(agentId: agentId, token: authToken) { error in
+                if let error {
+                    self.addDebugMessage("Agent stop failed: \(error.localizedDescription)")
+                }
+            }
         }
         resetConnectionState()
     }
 
     private func resetConnectionState() {
         rtcEngine?.leaveChannel()
-        rtmEngine?.logout()
+        rtmEngine?.logout { _, errorInfo in
+            if let reason = errorInfo?.reason, !reason.isEmpty {
+                self.addDebugMessage("RTM logout failed: \(reason)")
+            }
+        }
         convoAIAPI?.unsubscribeMessage(channelName: channel, completion: { error in
             if let error {
-                self.addDebugMessage("unsubscribe FAIL: \(error.message)")
+                self.addDebugMessage("ConvoAI unsubscribe failed: \(error.message)")
             }
         })
         isShowingChatSessionView = false
@@ -326,44 +349,42 @@ class ChatSessionViewModel: NSObject, ObservableObject {
         authToken = ""
         agentState = .unknown
         clearDebugMessages()
+        addDebugMessage("Session cleaned up")
     }
 }
 
 extension ChatSessionViewModel: AgoraRtcEngineDelegate {
     func rtcEngine(_ engine: AgoraRtcEngineKit, didJoinChannel channel: String, withUid uid: UInt, elapsed: Int) {
-        addDebugMessage("onJoinChannelSuccess")
+        addDebugMessage("RTC joined channel")
     }
 
     func rtcEngine(_ engine: AgoraRtcEngineKit, didJoinedOfUid uid: UInt, elapsed: Int) {
-        addDebugMessage("onUserJoined: \(uid)")
     }
 
     func rtcEngine(_ engine: AgoraRtcEngineKit, didOfflineOfUid uid: UInt, reason: AgoraUserOfflineReason) {
-        addDebugMessage("onUserOffline: \(uid)")
     }
 
     func rtcEngine(_ engine: AgoraRtcEngineKit, didOccurError errorCode: AgoraErrorCode) {
-        addDebugMessage("onError: \(errorCode.rawValue)")
+        addDebugMessage("RTC error: \(errorCode.rawValue)")
     }
 }
 
 extension ChatSessionViewModel: AgoraRtmClientDelegate {
     func rtmKit(_ rtmKit: AgoraRtmClientKit, didReceiveLinkStateEvent event: AgoraRtmLinkStateEvent) {
-        addDebugMessage("RTM link state: \(event.currentState.rawValue)")
+        if event.currentState == .failed {
+            addDebugMessage("RTM connection failed; re-login required")
+        }
     }
 }
 
 extension ChatSessionViewModel: ConversationalAIAPIEventHandler {
     func onAgentVoiceprintStateChanged(agentUserId: String, event: VoiceprintStateChangeEvent) {
-        addDebugMessage("onAgentVoiceprintStateChanged: \(event)")
     }
 
     func onMessageError(agentUserId: String, error: MessageError) {
-        addDebugMessage("onMessageError: \(error)")
     }
 
     func onMessageReceiptUpdated(agentUserId: String, messageReceipt: MessageReceipt) {
-        addDebugMessage("onMessageReceiptUpdated: \(messageReceipt)")
     }
 
     func onAgentStateChanged(agentUserId: String, event: StateChangeEvent) {
@@ -373,15 +394,13 @@ extension ChatSessionViewModel: ConversationalAIAPIEventHandler {
     }
 
     func onAgentInterrupted(agentUserId: String, event: InterruptEvent) {
-        addDebugMessage("onAgentInterrupted: \(event)")
     }
 
     func onAgentMetrics(agentUserId: String, metrics: Metric) {
-        addDebugMessage("onAgentMetrics: \(metrics)")
     }
 
     func onAgentError(agentUserId: String, error: ModuleError) {
-        addDebugMessage("onAgentError: \(error)")
+        addDebugMessage("Agent error: \(error)")
     }
 
     func onTranscriptUpdated(agentUserId: String, transcript: Transcript) {
@@ -399,6 +418,5 @@ extension ChatSessionViewModel: ConversationalAIAPIEventHandler {
     }
 
     func onDebugLog(log: String) {
-        addDebugMessage(log)
     }
 }

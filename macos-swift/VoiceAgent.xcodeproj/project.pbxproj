@@ -7,7 +7,6 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		AB1B32D02ECC8761007C8776 /* Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = AB1B32CA2ECC8761007C8776 /* Info.plist */; };
 		EE939DC8D53A32E39E838189 /* Pods_VoiceAgent.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 4A5937291E782236C68C3333 /* Pods_VoiceAgent.framework */; };
 /* End PBXBuildFile section */
 
@@ -17,14 +16,11 @@
 		7AD54CC0C3120A9E9178D03E /* Pods-VoiceAgent.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-VoiceAgent.release.xcconfig"; path = "Target Support Files/Pods-VoiceAgent/Pods-VoiceAgent.release.xcconfig"; sourceTree = "<group>"; };
 		AB1B2D9E2ECB4AAB007C8776 /* VoiceAgent.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = VoiceAgent.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		AB1B31A12ECC57B0007C8776 /* VoiceAgent.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = VoiceAgent.entitlements; sourceTree = "<group>"; };
-		AB1B32CA2ECC8761007C8776 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		AB1B2DA02ECB4AAB007C8776 /* VoiceAgent */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			exceptions = (
-			);
 			path = VoiceAgent;
 			sourceTree = "<group>";
 		};
@@ -63,7 +59,6 @@
 			isa = PBXGroup;
 			children = (
 				AB1B31A12ECC57B0007C8776 /* VoiceAgent.entitlements */,
-				AB1B32CA2ECC8761007C8776 /* Info.plist */,
 				AB1B2DA02ECB4AAB007C8776 /* VoiceAgent */,
 				AB1B2D9F2ECB4AAB007C8776 /* Products */,
 				4E8497B71FFE0AFD3E0B31E9 /* Pods */,
@@ -144,7 +139,6 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				AB1B32D02ECC8761007C8776 /* Info.plist in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -198,9 +192,13 @@
 			inputFileListPaths = (
 				"${PODS_ROOT}/Target Support Files/Pods-VoiceAgent/Pods-VoiceAgent-frameworks-${CONFIGURATION}-input-files.xcfilelist",
 			);
+			inputPaths = (
+			);
 			name = "[CP] Embed Pods Frameworks";
 			outputFileListPaths = (
 				"${PODS_ROOT}/Target Support Files/Pods-VoiceAgent/Pods-VoiceAgent-frameworks-${CONFIGURATION}-output-files.xcfilelist",
+			);
+			outputPaths = (
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;

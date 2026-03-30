@@ -76,8 +76,6 @@ static NSString * const API_BASE_URL = @"https://api.agora.io/cn/api/conversatio
                               expire:(NSInteger)expire
                                types:(NSArray<NSNumber *> *)types
                              success:(void (^)(NSString * _Nullable token))success {
-    NSDate *date = [NSDate date];
-    
     NSDictionary *params = @{
         @"appCertificate": [KeyCenter AG_APP_CERTIFICATE],
         @"appId": [KeyCenter AG_APP_ID],
@@ -96,7 +94,7 @@ static NSString * const API_BASE_URL = @"https://api.agora.io/cn/api/conversatio
                                        domain:@"generateToken" 
                                     completion:^(NSDictionary * _Nullable responseDict, NSError * _Nullable error) {
         if (error) {
-            NSLog(@"%@", error.localizedDescription);
+            NSLog(@"[AgentManager] generateToken failed: %@", error.localizedDescription);
             if (success) {
                 success(nil);
             }
@@ -106,7 +104,7 @@ static NSString * const API_BASE_URL = @"https://api.agora.io/cn/api/conversatio
         NSNumber *code = responseDict[@"code"];
         if (code && [code isKindOfClass:[NSNumber class]] && code.integerValue != 0) {
             NSString *msg = responseDict[@"msg"] ?: @"Unknown error";
-            NSLog(@"generateToken failed: code=%@, msg=%@", code, msg);
+            NSLog(@"[AgentManager] generateToken failed: code=%@, msg=%@", code, msg);
             if (success) {
                 success(nil);
             }
@@ -121,11 +119,6 @@ static NSString * const API_BASE_URL = @"https://api.agora.io/cn/api/conversatio
                 token = nil;
             }
         }
-        
-        NSTimeInterval cost = -[date timeIntervalSinceNow] * 1000;
-        NSLog(@"generateToken[%@] cost: %.0f ms", types, cost);
-        NSLog(@"%@", responseDict);
-        
         if (success) {
             success(token);
         }

@@ -67,6 +67,7 @@ static inline UIColor *VAHexColor(NSUInteger hexValue, CGFloat alpha) {
 
     [self setupUI];
     [self setupConstraints];
+    [self addDebugMessage:@"Main controller initialized"];
     [self initializeEngines];
 }
 
@@ -131,6 +132,7 @@ static inline UIColor *VAHexColor(NSUInteger hexValue, CGFloat alpha) {
 #pragma mark - Logs
 
 - (void)addDebugMessage:(NSString *)message {
+    NSLog(@"[VoiceAgent] %@", message);
     NSDateFormatter *formatter = [[NSDateFormatter alloc] init];
     formatter.timeStyle = NSDateFormatterMediumStyle;
     NSString *timestamp = [formatter stringFromDate:[NSDate date]];
@@ -168,9 +170,9 @@ static inline UIColor *VAHexColor(NSUInteger hexValue, CGFloat alpha) {
     NSError *error = nil;
     self.rtmEngine = [[AgoraRtmClientKit alloc] initWithConfig:config delegate:self error:&error];
     if (error) {
-        [self addDebugMessage:[NSString stringWithFormat:@"RTM Client 初始化失败: %@", error.localizedDescription]];
+        [self addDebugMessage:[NSString stringWithFormat:@"RTM client initialization failed: %@", error.localizedDescription]];
     } else {
-        [self addDebugMessage:@"RTM Client 初始化成功"];
+        [self addDebugMessage:@"RTM client initialized"];
     }
 }
 
@@ -183,17 +185,25 @@ static inline UIColor *VAHexColor(NSUInteger hexValue, CGFloat alpha) {
     [self.rtcEngine enableVideo];
     [self.rtcEngine enableAudioVolumeIndication:100 smooth:3 reportVad:NO];
     [self.rtcEngine setParameters:@"{\"che.audio.enable.predump\":{\"enable\":\"true\",\"duration\":\"60\"}}"];
-    [self addDebugMessage:@"RTC Engine 初始化成功"];
+    [self addDebugMessage:@"RTC engine initialized"];
 }
 
 - (void)initializeConvoAIAPI {
-    if (!self.rtcEngine || !self.rtmEngine) { return; }
+    if (!self.rtcEngine) {
+        [self addDebugMessage:@"ConvoAI API initialization failed: RTC engine is not initialized"];
+        return;
+    }
+    if (!self.rtmEngine) {
+        [self addDebugMessage:@"ConvoAI API initialization failed: RTM engine is not initialized"];
+        return;
+    }
     ConversationalAIAPIConfig *config = [[ConversationalAIAPIConfig alloc] initWithRtcEngine:self.rtcEngine
                                                                                     rtmEngine:self.rtmEngine
                                                                                    renderMode:TranscriptRenderModeWords
-                                                                                    enableLog:YES];
+                                                                                    enableLog:NO];
     self.convoAIAPI = [[ConversationalAIAPIImpl alloc] initWithConfig:config];
     [self.convoAIAPI addHandlerWithHandler:self];
+    [self addDebugMessage:@"ConvoAI API initialized"];
 }
 
 #pragma mark - Connection Flow
@@ -204,6 +214,7 @@ static inline UIColor *VAHexColor(NSUInteger hexValue, CGFloat alpha) {
     self.rtcJoined = NO;
     self.rtmLoggedIn = NO;
     [self showLoadingToast];
+    [self addDebugMessage:@"Starting session connection"];
 
     dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
         NSError *error = nil;
@@ -231,7 +242,7 @@ static inline UIColor *VAHexColor(NSUInteger hexValue, CGFloat alpha) {
 }
 
 - (BOOL)generateUserToken:(NSError **)error {
-    [self addDebugMessage:@"获取 Token 调用中..."];
+    [self addDebugMessage:@"Requesting user token..."];
     dispatch_semaphore_t semaphore = dispatch_semaphore_create(0);
     __block BOOL success = NO;
     __block NSError *localError = nil;
@@ -241,11 +252,11 @@ static inline UIColor *VAHexColor(NSUInteger hexValue, CGFloat alpha) {
                                       success:^(NSString * _Nullable token) {
         if (token.length > 0) {
             self.userToken = token;
-            [self addDebugMessage:@"获取 Token 调用成功"];
+            [self addDebugMessage:@"User token request succeeded"];
             success = YES;
         } else {
-            [self addDebugMessage:@"获取 Token 调用失败"];
-            localError = [NSError errorWithDomain:@"generateUserToken" code:-1 userInfo:@{NSLocalizedDescriptionKey: @"获取 token 失败，请重试"}];
+            [self addDebugMessage:@"User token request failed"];
+            localError = [NSError errorWithDomain:@"generateUserToken" code:-1 userInfo:@{NSLocalizedDescriptionKey: @"Failed to get user token. Please try again."}];
         }
         dispatch_semaphore_signal(semaphore);
     }];
@@ -255,6 +266,7 @@ static inline UIColor *VAHexColor(NSUInteger hexValue, CGFloat alpha) {
 }
 
 - (BOOL)generateAgentToken:(NSError **)error {
+    [self addDebugMessage:@"Requesting agent token..."];
     dispatch_semaphore_t semaphore = dispatch_semaphore_create(0);
     __block BOOL success = NO;
     __block NSError *localError = nil;
@@ -264,11 +276,11 @@ static inline UIColor *VAHexColor(NSUInteger hexValue, CGFloat alpha) {
                                       success:^(NSString * _Nullable token) {
         if (token.length > 0) {
             self.agentToken = token;
-            [self addDebugMessage:@"Agent Token 调用成功"];
+            [self addDebugMessage:@"Agent token request succeeded"];
             success = YES;
         } else {
-            [self addDebugMessage:@"Agent Token 调用失败"];
-            localError = [NSError errorWithDomain:@"generateAgentToken" code:-1 userInfo:@{NSLocalizedDescriptionKey: @"获取 agent token 失败"}];
+            [self addDebugMessage:@"Agent token request failed"];
+            localError = [NSError errorWithDomain:@"generateAgentToken" code:-1 userInfo:@{NSLocalizedDescriptionKey: @"Failed to get agent token"}];
         }
         dispatch_semaphore_signal(semaphore);
     }];
@@ -278,6 +290,7 @@ static inline UIColor *VAHexColor(NSUInteger hexValue, CGFloat alpha) {
 }
 
 - (BOOL)generateAuthToken:(NSError **)error {
+    [self addDebugMessage:@"Requesting auth token..."];
     dispatch_semaphore_t semaphore = dispatch_semaphore_create(0);
     __block BOOL success = NO;
     __block NSError *localError = nil;
@@ -287,11 +300,11 @@ static inline UIColor *VAHexColor(NSUInteger hexValue, CGFloat alpha) {
                                       success:^(NSString * _Nullable token) {
         if (token.length > 0) {
             self.authToken = token;
-            [self addDebugMessage:@"Auth Token 调用成功"];
+            [self addDebugMessage:@"Auth token request succeeded"];
             success = YES;
         } else {
-            [self addDebugMessage:@"Auth Token 调用失败"];
-            localError = [NSError errorWithDomain:@"generateAuthToken" code:-1 userInfo:@{NSLocalizedDescriptionKey: @"获取 auth token 失败"}];
+            [self addDebugMessage:@"Auth token request failed"];
+            localError = [NSError errorWithDomain:@"generateAuthToken" code:-1 userInfo:@{NSLocalizedDescriptionKey: @"Failed to get auth token"}];
         }
         dispatch_semaphore_signal(semaphore);
     }];
@@ -302,21 +315,21 @@ static inline UIColor *VAHexColor(NSUInteger hexValue, CGFloat alpha) {
 
 - (BOOL)loginRTM:(NSError **)error {
     if (!self.rtmEngine) {
-        if (error) *error = [NSError errorWithDomain:@"loginRTM" code:-1 userInfo:@{NSLocalizedDescriptionKey: @"RTM engine 未初始化"}];
+        if (error) *error = [NSError errorWithDomain:@"loginRTM" code:-1 userInfo:@{NSLocalizedDescriptionKey: @"RTM engine is not initialized"}];
         return NO;
     }
-    [self addDebugMessage:@"RTM Login 调用中..."];
+    [self addDebugMessage:@"RTM login in progress..."];
     dispatch_semaphore_t semaphore = dispatch_semaphore_create(0);
     __block BOOL success = NO;
     __block NSError *localError = nil;
     [self.rtmEngine loginByToken:self.userToken completion:^(AgoraRtmCommonResponse * _Nullable response, AgoraRtmErrorInfo * _Nullable errorInfo) {
         if (errorInfo == nil) {
             self.rtmLoggedIn = YES;
-            [self addDebugMessage:@"RTM Login 调用成功"];
+            [self addDebugMessage:@"RTM login succeeded"];
             success = YES;
         } else {
-            [self addDebugMessage:[NSString stringWithFormat:@"RTM Login 调用失败: %@", errorInfo.reason]];
-            localError = [NSError errorWithDomain:@"loginRTM" code:errorInfo.errorCode userInfo:@{NSLocalizedDescriptionKey: errorInfo.reason ?: @"rtm 登录失败"}];
+            [self addDebugMessage:[NSString stringWithFormat:@"RTM login failed: %@", errorInfo.reason]];
+            localError = [NSError errorWithDomain:@"loginRTM" code:errorInfo.errorCode userInfo:@{NSLocalizedDescriptionKey: errorInfo.reason ?: @"RTM login failed"}];
         }
         dispatch_semaphore_signal(semaphore);
     }];
@@ -327,11 +340,11 @@ static inline UIColor *VAHexColor(NSUInteger hexValue, CGFloat alpha) {
 
 - (BOOL)joinRTCChannel:(NSError **)error {
     if (!self.rtcEngine) {
-        if (error) *error = [NSError errorWithDomain:@"joinRTCChannel" code:-1 userInfo:@{NSLocalizedDescriptionKey: @"RTC engine 未初始化"}];
+        if (error) *error = [NSError errorWithDomain:@"joinRTCChannel" code:-1 userInfo:@{NSLocalizedDescriptionKey: @"RTC engine is not initialized"}];
         return NO;
     }
 
-    [self addDebugMessage:@"joinChannel 调用中..."];
+    [self addDebugMessage:@"joinChannel in progress..."];
     AgoraRtcChannelMediaOptions *options = [[AgoraRtcChannelMediaOptions alloc] init];
     options.clientRoleType = AgoraClientRoleBroadcaster;
     options.publishMicrophoneTrack = YES;
@@ -341,29 +354,30 @@ static inline UIColor *VAHexColor(NSUInteger hexValue, CGFloat alpha) {
 
     NSInteger result = [self.rtcEngine joinChannelByToken:self.userToken channelId:self.channel uid:self.uid mediaOptions:options joinSuccess:nil];
     if (result != 0) {
-        [self addDebugMessage:[NSString stringWithFormat:@"joinChannel 调用失败: ret=%ld", (long)result]];
-        if (error) *error = [NSError errorWithDomain:@"joinRTCChannel" code:result userInfo:@{NSLocalizedDescriptionKey: [NSString stringWithFormat:@"加入 RTC 频道失败，错误码: %ld", (long)result]}];
+        [self addDebugMessage:[NSString stringWithFormat:@"joinChannel failed: ret=%ld", (long)result]];
+        if (error) *error = [NSError errorWithDomain:@"joinRTCChannel" code:result userInfo:@{NSLocalizedDescriptionKey: [NSString stringWithFormat:@"Failed to join RTC channel. Error code: %ld", (long)result]}];
         return NO;
     }
-    [self addDebugMessage:[NSString stringWithFormat:@"joinChannel 调用成功: ret=%ld", (long)result]];
+    [self addDebugMessage:@"joinChannel succeeded"];
     return YES;
 }
 
 - (BOOL)subscribeConvoAIMessage:(NSError **)error {
     if (!self.convoAIAPI) {
-        if (error) *error = [NSError errorWithDomain:@"subscribeConvoAIMessage" code:-1 userInfo:@{NSLocalizedDescriptionKey: @"ConvoAI API 未初始化"}];
+        if (error) *error = [NSError errorWithDomain:@"subscribeConvoAIMessage" code:-1 userInfo:@{NSLocalizedDescriptionKey: @"ConvoAI API is not initialized"}];
         return NO;
     }
+    [self addDebugMessage:@"Subscribing to ConvoAI..."];
     dispatch_semaphore_t semaphore = dispatch_semaphore_create(0);
     __block BOOL success = YES;
     __block NSError *localError = nil;
     [self.convoAIAPI subscribeMessageWithChannelName:self.channel completion:^(ConversationalAIAPIError * _Nullable err) {
         if (err) {
-            [self addDebugMessage:[NSString stringWithFormat:@"订阅消息失败: %@", err.message]];
-            localError = [NSError errorWithDomain:@"subscribeConvoAIMessage" code:err.code userInfo:@{NSLocalizedDescriptionKey: err.message ?: @"订阅失败"}];
+            [self addDebugMessage:[NSString stringWithFormat:@"ConvoAI subscription failed: %@", err.message]];
+            localError = [NSError errorWithDomain:@"subscribeConvoAIMessage" code:err.code userInfo:@{NSLocalizedDescriptionKey: err.message ?: @"ConvoAI subscription failed"}];
             success = NO;
         } else {
-            [self addDebugMessage:@"订阅消息成功"];
+            [self addDebugMessage:@"ConvoAI subscribed"];
         }
         dispatch_semaphore_signal(semaphore);
     }];
@@ -417,21 +431,21 @@ static inline UIColor *VAHexColor(NSUInteger hexValue, CGFloat alpha) {
 }
 
 - (BOOL)startAgent:(NSError **)error {
-    [self addDebugMessage:@"Agent Start 调用中..."];
+    [self addDebugMessage:@"Agent start in progress..."];
     dispatch_semaphore_t semaphore = dispatch_semaphore_create(0);
     __block BOOL success = NO;
     __block NSError *localError = nil;
     [AgentManager startAgentWithParameter:[self startAgentParameter] token:self.authToken completion:^(NSString * _Nullable agentId, NSError * _Nullable errorValue) {
         if (errorValue) {
-            [self addDebugMessage:[NSString stringWithFormat:@"Agent Start 调用失败: %@", errorValue.localizedDescription]];
+            [self addDebugMessage:[NSString stringWithFormat:@"Agent start failed: %@", errorValue.localizedDescription]];
             localError = errorValue;
         } else if (agentId.length > 0) {
             self.agentId = agentId;
-            [self addDebugMessage:[NSString stringWithFormat:@"Agent Start 调用成功 (agentId: %@)", agentId]];
+            [self addDebugMessage:[NSString stringWithFormat:@"Agent start succeeded (agentId: %@)", agentId]];
             success = YES;
         } else {
-            [self addDebugMessage:@"Agent Start 调用失败: 未返回 agentId"];
-            localError = [NSError errorWithDomain:@"startAgent" code:-1 userInfo:@{NSLocalizedDescriptionKey: @"请求失败"}];
+            [self addDebugMessage:@"Agent start failed: missing agentId"];
+            localError = [NSError errorWithDomain:@"startAgent" code:-1 userInfo:@{NSLocalizedDescriptionKey: @"Agent start failed: missing agentId"}];
         }
         dispatch_semaphore_signal(semaphore);
     }];
@@ -453,15 +467,16 @@ static inline UIColor *VAHexColor(NSUInteger hexValue, CGFloat alpha) {
 }
 
 - (void)resetConnectionState {
+    [self addDebugMessage:@"Starting session cleanup"];
     [self.rtcEngine leaveChannel:nil];
     [self.rtmEngine logout:^(AgoraRtmCommonResponse * _Nullable response, AgoraRtmErrorInfo * _Nullable errorInfo) {
         if (errorInfo) {
-            [self addDebugMessage:[NSString stringWithFormat:@"RTM logout FAIL: %@", errorInfo.reason]];
+            [self addDebugMessage:[NSString stringWithFormat:@"RTM logout failed: %@", errorInfo.reason]];
         }
     }];
     [self.convoAIAPI unsubscribeMessageWithChannelName:self.channel completion:^(ConversationalAIAPIError * _Nullable error) {
         if (error) {
-            [self addDebugMessage:[NSString stringWithFormat:@"unsubscribe FAIL: %@", error.message]];
+            [self addDebugMessage:[NSString stringWithFormat:@"ConvoAI unsubscribe failed: %@", error.message]];
         }
     }];
     [self switchToConfigView];
@@ -475,6 +490,7 @@ static inline UIColor *VAHexColor(NSUInteger hexValue, CGFloat alpha) {
     self.userToken = @"";
     self.agentToken = @"";
     self.authToken = @"";
+    [self addDebugMessage:@"Session cleaned up"];
 }
 
 #pragma mark - Actions
@@ -491,10 +507,11 @@ static inline UIColor *VAHexColor(NSUInteger hexValue, CGFloat alpha) {
 }
 
 - (void)endCall {
+    [self addDebugMessage:@"Starting session shutdown"];
     if (self.agentId.length > 0 && self.authToken.length > 0) {
         [AgentManager stopAgentWithAgentId:self.agentId token:self.authToken completion:^(NSError * _Nullable error) {
             if (error) {
-                [self addDebugMessage:[NSString stringWithFormat:@"stopAgent FAIL: %@", error.localizedDescription]];
+                [self addDebugMessage:[NSString stringWithFormat:@"Agent stop failed: %@", error.localizedDescription]];
             }
         }];
     }
@@ -577,39 +594,36 @@ static inline UIColor *VAHexColor(NSUInteger hexValue, CGFloat alpha) {
 
 - (void)rtcEngine:(AgoraRtcEngineKit *)engine didJoinChannel:(NSString *)channel withUid:(NSUInteger)uid elapsed:(NSInteger)elapsed {
     self.rtcJoined = YES;
-    [self addDebugMessage:@"onJoinChannelSuccess"];
+    [self addDebugMessage:@"RTC joined channel"];
 }
 
 - (void)rtcEngine:(AgoraRtcEngineKit *)engine didJoinedOfUid:(NSUInteger)uid elapsed:(NSInteger)elapsed {
-    [self addDebugMessage:[NSString stringWithFormat:@"onUserJoined: %lu", (unsigned long)uid]];
 }
 
 - (void)rtcEngine:(AgoraRtcEngineKit *)engine didOfflineOfUid:(NSUInteger)uid reason:(AgoraUserOfflineReason)reason {
-    [self addDebugMessage:[NSString stringWithFormat:@"onUserOffline: %lu", (unsigned long)uid]];
 }
 
 - (void)rtcEngine:(AgoraRtcEngineKit *)engine didOccurError:(AgoraErrorCode)errorCode {
-    [self addDebugMessage:[NSString stringWithFormat:@"onError: %ld", (long)errorCode]];
+    [self addDebugMessage:[NSString stringWithFormat:@"RTC error: %ld", (long)errorCode]];
 }
 
 #pragma mark - AgoraRtmClientDelegate
 
 - (void)rtmKit:(AgoraRtmClientKit *)rtmKit didReceiveLinkStateEvent:(AgoraRtmLinkStateEvent *)event {
-    [self addDebugMessage:[NSString stringWithFormat:@"RTM link state: %ld", (long)event.currentState]];
+    if (event.currentState == AgoraRtmLinkStateFailed) {
+        [self addDebugMessage:@"RTM connection failed; re-login required"];
+    }
 }
 
 #pragma mark - ConversationalAIAPIEventHandler
 
 - (void)onAgentVoiceprintStateChangedWithAgentUserId:(NSString *)agentUserId event:(VoiceprintStateChangeEvent *)event {
-    [self addDebugMessage:[NSString stringWithFormat:@"onAgentVoiceprintStateChanged: %@", event]];
 }
 
 - (void)onMessageErrorWithAgentUserId:(NSString *)agentUserId error:(MessageError *)error {
-    [self addDebugMessage:[NSString stringWithFormat:@"onMessageError: %@", error]];
 }
 
 - (void)onMessageReceiptUpdatedWithAgentUserId:(NSString *)agentUserId messageReceipt:(MessageReceipt *)messageReceipt {
-    [self addDebugMessage:[NSString stringWithFormat:@"onMessageReceiptUpdated: %@", messageReceipt]];
 }
 
 - (void)onAgentStateChangedWithAgentUserId:(NSString *)agentUserId event:(StateChangeEvent *)event {
@@ -618,15 +632,13 @@ static inline UIColor *VAHexColor(NSUInteger hexValue, CGFloat alpha) {
 }
 
 - (void)onAgentInterruptedWithAgentUserId:(NSString *)agentUserId event:(InterruptEvent *)event {
-    [self addDebugMessage:[NSString stringWithFormat:@"onAgentInterrupted: %@", event]];
 }
 
 - (void)onAgentMetricsWithAgentUserId:(NSString *)agentUserId metrics:(Metric *)metrics {
-    [self addDebugMessage:[NSString stringWithFormat:@"onAgentMetrics: %@", metrics]];
 }
 
 - (void)onAgentErrorWithAgentUserId:(NSString *)agentUserId error:(ModuleError *)error {
-    [self addDebugMessage:[NSString stringWithFormat:@"onAgentError: %@", error]];
+    [self addDebugMessage:[NSString stringWithFormat:@"Agent error: %@", error]];
 }
 
 - (void)onTranscriptUpdatedWithAgentUserId:(NSString *)agentUserId transcript:(Transcript *)transcript {
@@ -648,7 +660,6 @@ static inline UIColor *VAHexColor(NSUInteger hexValue, CGFloat alpha) {
 }
 
 - (void)onDebugLogWithLog:(NSString *)log {
-    [self addDebugMessage:log];
 }
 
 @end

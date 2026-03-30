@@ -9,10 +9,6 @@ import SwiftUI
 
 @main
 struct VoiceAgentApp: App {
-    init() {
-        print("[VoiceAgentApp] App initialized")
-    }
-    
     var body: some Scene {
         WindowGroup {
             VoiceAgentRootView()
