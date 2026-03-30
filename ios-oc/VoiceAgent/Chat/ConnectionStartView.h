@@ -1,5 +1,5 @@
 //
-//  ConfigBackgroundView.h
+//  ConnectionStartView.h
 //  VoiceAgent
 //
 //  Created by qinhui on 2025/11/17.
@@ -9,9 +9,8 @@
 
 NS_ASSUME_NONNULL_BEGIN
 
-@interface ConfigBackgroundView : UIView
+@interface ConnectionStartView : UIView
 
-@property(nonatomic, strong, readonly) UITextField *channelNameTextField;
 @property(nonatomic, strong, readonly) UIButton *startButton;
 
 - (void)updateButtonState:(BOOL)isEnabled;

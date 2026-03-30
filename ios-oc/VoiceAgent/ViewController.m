@@ -4,20 +4,27 @@
 //
 
 #import "ViewController.h"
-#import "TranscriptCell.h"
+#import "TranscriptMessageCell.h"
 #import "KeyCenter.h"
 #import "AgentManager.h"
-#import "ConfigBackgroundView.h"
-#import "ChatBackgroundView.h"
+#import "ConnectionStartView.h"
+#import "ChatSessionView.h"
 #import <Masonry/Masonry.h>
 #import <AgoraRtcKit/AgoraRtcKit.h>
 #import <AgoraRtmKit/AgoraRtmKit.h>
 #import "VoiceAgent-Swift.h"
 
+static inline UIColor *VAHexColor(NSUInteger hexValue, CGFloat alpha) {
+    return [UIColor colorWithRed:((hexValue >> 16) & 0xFF) / 255.0
+                           green:((hexValue >> 8) & 0xFF) / 255.0
+                            blue:(hexValue & 0xFF) / 255.0
+                           alpha:alpha];
+}
+
 @interface ViewController () <UITableViewDataSource, UITableViewDelegate, AgoraRtcEngineDelegate, AgoraRtmClientDelegate, ConversationalAIAPIEventHandler>
 
-@property (nonatomic, strong) ConfigBackgroundView *configBackgroundView;
-@property (nonatomic, strong) ChatBackgroundView *chatBackgroundView;
+@property (nonatomic, strong) ConnectionStartView *connectionStartView;
+@property (nonatomic, strong) ChatSessionView *chatSessionView;
 @property (nonatomic, strong) UITextView *debugInfoTextView;
 
 @property (nonatomic, assign) NSInteger uid;
@@ -48,6 +55,7 @@
 
 - (void)viewDidLoad {
     [super viewDidLoad];
+    [self.navigationController setNavigationBarHidden:YES animated:NO];
 
     self.uid = [self randomUid];
     self.agentUid = [self randomUid];
@@ -73,32 +81,33 @@
 }
 
 - (void)setupUI {
-    self.view.backgroundColor = [UIColor systemBackgroundColor];
+    self.view.backgroundColor = VAHexColor(0x0F172A, 1.0);
 
     self.debugInfoTextView = [[UITextView alloc] init];
     self.debugInfoTextView.editable = NO;
     self.debugInfoTextView.selectable = YES;
     self.debugInfoTextView.font = [UIFont monospacedSystemFontOfSize:12 weight:UIFontWeightRegular];
-    self.debugInfoTextView.textColor = [UIColor secondaryLabelColor];
-    self.debugInfoTextView.backgroundColor = [UIColor secondarySystemBackgroundColor];
+    self.debugInfoTextView.textColor = VAHexColor(0x94A3B8, 1.0);
+    self.debugInfoTextView.backgroundColor = VAHexColor(0x020617, 0.5);
     self.debugInfoTextView.layer.cornerRadius = 12;
     self.debugInfoTextView.layer.borderWidth = 0.5;
-    self.debugInfoTextView.layer.borderColor = [UIColor separatorColor].CGColor;
+    self.debugInfoTextView.layer.borderColor = VAHexColor(0x334155, 0.5).CGColor;
     self.debugInfoTextView.textContainerInset = UIEdgeInsetsMake(8, 8, 8, 8);
     self.debugInfoTextView.text = @"Waiting for connection...\n";
+    self.debugInfoTextView.indicatorStyle = UIScrollViewIndicatorStyleWhite;
     [self.view addSubview:self.debugInfoTextView];
 
-    self.configBackgroundView = [[ConfigBackgroundView alloc] init];
-    [self.configBackgroundView.startButton addTarget:self action:@selector(startButtonTapped:) forControlEvents:UIControlEventTouchUpInside];
-    [self.view addSubview:self.configBackgroundView];
+    self.connectionStartView = [[ConnectionStartView alloc] init];
+    [self.connectionStartView.startButton addTarget:self action:@selector(startButtonTapped:) forControlEvents:UIControlEventTouchUpInside];
+    [self.view addSubview:self.connectionStartView];
 
-    self.chatBackgroundView = [[ChatBackgroundView alloc] init];
-    self.chatBackgroundView.hidden = YES;
-    self.chatBackgroundView.tableView.delegate = self;
-    self.chatBackgroundView.tableView.dataSource = self;
-    [self.chatBackgroundView.micButton addTarget:self action:@selector(toggleMicrophone) forControlEvents:UIControlEventTouchUpInside];
-    [self.chatBackgroundView.endCallButton addTarget:self action:@selector(endCall) forControlEvents:UIControlEventTouchUpInside];
-    [self.view addSubview:self.chatBackgroundView];
+    self.chatSessionView = [[ChatSessionView alloc] init];
+    self.chatSessionView.hidden = YES;
+    self.chatSessionView.tableView.delegate = self;
+    self.chatSessionView.tableView.dataSource = self;
+    [self.chatSessionView.micButton addTarget:self action:@selector(toggleMicrophone) forControlEvents:UIControlEventTouchUpInside];
+    [self.chatSessionView.endCallButton addTarget:self action:@selector(endCall) forControlEvents:UIControlEventTouchUpInside];
+    [self.view addSubview:self.chatSessionView];
 }
 
 - (void)setupConstraints {
@@ -108,12 +117,12 @@
         make.height.mas_equalTo(120);
     }];
 
-    [self.configBackgroundView mas_makeConstraints:^(MASConstraintMaker *make) {
+    [self.connectionStartView mas_makeConstraints:^(MASConstraintMaker *make) {
         make.top.equalTo(self.debugInfoTextView.mas_bottom).offset(20);
         make.left.right.bottom.equalTo(self.view);
     }];
 
-    [self.chatBackgroundView mas_makeConstraints:^(MASConstraintMaker *make) {
+    [self.chatSessionView mas_makeConstraints:^(MASConstraintMaker *make) {
         make.top.equalTo(self.debugInfoTextView.mas_bottom).offset(20);
         make.left.right.bottom.equalTo(self.view);
     }];
@@ -434,18 +443,22 @@
 #pragma mark - View State
 
 - (void)switchToChatView {
-    self.configBackgroundView.hidden = YES;
-    self.chatBackgroundView.hidden = NO;
+    self.connectionStartView.hidden = YES;
+    self.chatSessionView.hidden = NO;
 }
 
 - (void)switchToConfigView {
-    self.chatBackgroundView.hidden = YES;
-    self.configBackgroundView.hidden = NO;
+    self.chatSessionView.hidden = YES;
+    self.connectionStartView.hidden = NO;
 }
 
 - (void)resetConnectionState {
     [self.rtcEngine leaveChannel:nil];
-    [self.rtmEngine logout];
+    [self.rtmEngine logout:^(AgoraRtmCommonResponse * _Nullable response, AgoraRtmErrorInfo * _Nullable errorInfo) {
+        if (errorInfo) {
+            [self addDebugMessage:[NSString stringWithFormat:@"RTM logout FAIL: %@", errorInfo.reason]];
+        }
+    }];
     [self.convoAIAPI unsubscribeMessageWithChannelName:self.channel completion:^(ConversationalAIAPIError * _Nullable error) {
         if (error) {
             [self addDebugMessage:[NSString stringWithFormat:@"unsubscribe FAIL: %@", error.message]];
@@ -453,11 +466,11 @@
     }];
     [self switchToConfigView];
     [self.transcripts removeAllObjects];
-    [self.chatBackgroundView.tableView reloadData];
+    [self.chatSessionView.tableView reloadData];
     [self clearDebugMessages];
     self.isMicMuted = NO;
     self.currentAgentState = 5;
-    [self.chatBackgroundView updateStatusView:self.currentAgentState];
+    [self.chatSessionView updateStatusView:self.currentAgentState];
     self.agentId = @"";
     self.userToken = @"";
     self.agentToken = @"";
@@ -473,7 +486,7 @@
 
 - (void)toggleMicrophone {
     self.isMicMuted = !self.isMicMuted;
-    [self.chatBackgroundView updateMicButtonState:self.isMicMuted];
+    [self.chatSessionView updateMicButtonState:self.isMicMuted];
     [self.rtcEngine adjustRecordingSignalVolume:self.isMicMuted ? 0 : 100];
 }
 
@@ -492,11 +505,14 @@
 
 - (void)showLoadingToast {
     UIView *toast = [[UIView alloc] init];
-    toast.backgroundColor = [[UIColor secondarySystemBackgroundColor] colorWithAlphaComponent:0.9];
+    toast.backgroundColor = [VAHexColor(0x1E293B, 1.0) colorWithAlphaComponent:0.9];
     toast.layer.cornerRadius = 12;
+    toast.layer.borderWidth = 0.5;
+    toast.layer.borderColor = VAHexColor(0x334155, 0.5).CGColor;
     [self.view addSubview:toast];
 
     UIActivityIndicatorView *indicator = [[UIActivityIndicatorView alloc] initWithActivityIndicatorStyle:UIActivityIndicatorViewStyleLarge];
+    indicator.color = VAHexColor(0x3B82F6, 1.0);
     [indicator startAnimating];
     [toast addSubview:indicator];
 
@@ -548,7 +564,7 @@
 }
 
 - (UITableViewCell *)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)indexPath {
-    TranscriptCell *cell = [tableView dequeueReusableCellWithIdentifier:@"TranscriptCell" forIndexPath:indexPath];
+    TranscriptMessageCell *cell = [tableView dequeueReusableCellWithIdentifier:@"TranscriptMessageCell" forIndexPath:indexPath];
     [cell configureWithTranscript:self.transcripts[indexPath.row]];
     return cell;
 }
@@ -598,7 +614,7 @@
 
 - (void)onAgentStateChangedWithAgentUserId:(NSString *)agentUserId event:(StateChangeEvent *)event {
     self.currentAgentState = event.state;
-    [self.chatBackgroundView updateStatusView:self.currentAgentState];
+    [self.chatSessionView updateStatusView:self.currentAgentState];
 }
 
 - (void)onAgentInterruptedWithAgentUserId:(NSString *)agentUserId event:(InterruptEvent *)event {
@@ -623,10 +639,10 @@
         [self.transcripts addObject:transcript];
     }
     dispatch_async(dispatch_get_main_queue(), ^{
-        [self.chatBackgroundView.tableView reloadData];
+        [self.chatSessionView.tableView reloadData];
         if (self.transcripts.count > 0) {
             NSIndexPath *indexPath = [NSIndexPath indexPathForRow:self.transcripts.count - 1 inSection:0];
-            [self.chatBackgroundView.tableView scrollToRowAtIndexPath:indexPath atScrollPosition:UITableViewScrollPositionBottom animated:YES];
+            [self.chatSessionView.tableView scrollToRowAtIndexPath:indexPath atScrollPosition:UITableViewScrollPositionBottom animated:YES];
         }
     });
 }

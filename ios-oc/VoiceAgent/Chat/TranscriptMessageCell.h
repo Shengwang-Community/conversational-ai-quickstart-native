@@ -1,5 +1,5 @@
 //
-//  TranscriptCell.h
+//  TranscriptMessageCell.h
 //  VoiceAgent
 //
 //  Created by qinhui on 2025/11/17.
@@ -9,11 +9,10 @@
 
 NS_ASSUME_NONNULL_BEGIN
 
-@interface TranscriptCell : UITableViewCell
+@interface TranscriptMessageCell : UITableViewCell
 
 - (void)configureWithTranscript:(id)transcript;
 
 @end
 
 NS_ASSUME_NONNULL_END
-

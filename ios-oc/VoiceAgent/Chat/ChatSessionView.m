@@ -1,15 +1,22 @@
 //
-//  ChatBackgroundView.m
+//  ChatSessionView.m
 //  VoiceAgent
 //
 //  Created by qinhui on 2025/11/17.
 //
 
-#import "ChatBackgroundView.h"
-#import "TranscriptCell.h"
+#import "ChatSessionView.h"
+#import "TranscriptMessageCell.h"
 #import <Masonry/Masonry.h>
 
-@interface ChatBackgroundView ()
+static inline UIColor *VAHexColor(NSUInteger hexValue, CGFloat alpha) {
+    return [UIColor colorWithRed:((hexValue >> 16) & 0xFF) / 255.0
+                           green:((hexValue >> 8) & 0xFF) / 255.0
+                            blue:(hexValue & 0xFF) / 255.0
+                           alpha:alpha];
+}
+
+@interface ChatSessionView ()
 
 @property (nonatomic, strong, readwrite) UITableView *tableView;
 @property (nonatomic, strong, readwrite) AgentStateView *statusView;
@@ -19,7 +26,7 @@
 
 @end
 
-@implementation ChatBackgroundView
+@implementation ChatSessionView
 
 - (instancetype)initWithFrame:(CGRect)frame {
     self = [super initWithFrame:frame];
@@ -40,12 +47,12 @@
     // TableView for transcripts
     self.tableView = [[UITableView alloc] init];
     self.tableView.separatorStyle = UITableViewCellSeparatorStyleNone;
-    self.tableView.backgroundColor = [UIColor secondarySystemBackgroundColor];
+    self.tableView.backgroundColor = VAHexColor(0x1E293B, 0.5);
     self.tableView.layer.cornerRadius = 12;
     self.tableView.layer.borderWidth = 0.5;
-    self.tableView.layer.borderColor = [UIColor separatorColor].CGColor;
+    self.tableView.layer.borderColor = VAHexColor(0x334155, 0.5).CGColor;
     self.tableView.clipsToBounds = YES;
-    [self.tableView registerClass:[TranscriptCell class] forCellReuseIdentifier:@"TranscriptCell"];
+    [self.tableView registerClass:[TranscriptMessageCell class] forCellReuseIdentifier:@"TranscriptMessageCell"];
     [self addSubview:self.tableView];
     
     // Status View
@@ -54,25 +61,26 @@
     
     // Control Bar
     self.controlBarView = [[UIView alloc] init];
-    self.controlBarView.backgroundColor = [UIColor secondarySystemBackgroundColor];
+    self.controlBarView.backgroundColor = VAHexColor(0x1E293B, 0.8);
     self.controlBarView.layer.cornerRadius = 12;
     self.controlBarView.layer.borderWidth = 0.5;
-    self.controlBarView.layer.borderColor = [UIColor separatorColor].CGColor;
+    self.controlBarView.layer.borderColor = VAHexColor(0x334155, 0.5).CGColor;
     [self addSubview:self.controlBarView];
     
     // Mic Button
     self.micButton = [UIButton buttonWithType:UIButtonTypeSystem];
     [self.micButton setImage:[UIImage systemImageNamed:@"mic.fill"] forState:UIControlStateNormal];
-    self.micButton.tintColor = [UIColor whiteColor];
-    self.micButton.backgroundColor = [UIColor systemBlueColor];
+    self.micButton.tintColor = VAHexColor(0xCBD5E1, 1.0);
+    self.micButton.backgroundColor = VAHexColor(0x334155, 1.0);
     self.micButton.layer.cornerRadius = 22;
     [self.controlBarView addSubview:self.micButton];
     
     // End Call Button
     self.endCallButton = [UIButton buttonWithType:UIButtonTypeSystem];
     [self.endCallButton setTitle:@"Stop Agent" forState:UIControlStateNormal];
-    self.endCallButton.tintColor = [UIColor whiteColor];
-    self.endCallButton.backgroundColor = [UIColor redColor];
+    [self.endCallButton setTitleColor:[UIColor whiteColor] forState:UIControlStateNormal];
+    self.endCallButton.titleLabel.font = [UIFont systemFontOfSize:14 weight:UIFontWeightMedium];
+    self.endCallButton.backgroundColor = VAHexColor(0xDC2626, 1.0);
     self.endCallButton.layer.cornerRadius = 8;
     [self.controlBarView addSubview:self.endCallButton];
 }
@@ -113,6 +121,8 @@
 - (void)updateMicButtonState:(BOOL)isMuted {
     NSString *imageName = isMuted ? @"mic.slash.fill" : @"mic.fill";
     [self.micButton setImage:[UIImage systemImageNamed:imageName] forState:UIControlStateNormal];
+    self.micButton.tintColor = isMuted ? VAHexColor(0xF87171, 1.0) : VAHexColor(0xCBD5E1, 1.0);
+    self.micButton.backgroundColor = isMuted ? VAHexColor(0xEF4444, 0.2) : VAHexColor(0x334155, 1.0);
 }
 
 - (void)updateStatusView:(NSInteger)state {
@@ -124,7 +134,7 @@
 }
 
 - (void)scrollToBottomAnimated:(BOOL)animated {
-    NSInteger rowCount = [self.dataSource numberOfTranscriptsInChatBackgroundView:self];
+    NSInteger rowCount = [self.dataSource numberOfTranscriptsInChatSessionView:self];
     if (rowCount > 0) {
         NSIndexPath *indexPath = [NSIndexPath indexPathForRow:rowCount - 1 inSection:0];
         [self.tableView scrollToRowAtIndexPath:indexPath atScrollPosition:UITableViewScrollPositionBottom animated:animated];
@@ -133,12 +143,12 @@
 
 // MARK: - UITableViewDataSource
 - (NSInteger)tableView:(UITableView *)tableView numberOfRowsInSection:(NSInteger)section {
-    return [self.dataSource numberOfTranscriptsInChatBackgroundView:self];
+    return [self.dataSource numberOfTranscriptsInChatSessionView:self];
 }
 
 - (UITableViewCell *)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)indexPath {
-    TranscriptCell *cell = [tableView dequeueReusableCellWithIdentifier:@"TranscriptCell" forIndexPath:indexPath];
-    Transcript *transcript = [self.dataSource chatBackgroundView:self transcriptAtIndex:indexPath.row];
+    TranscriptMessageCell *cell = [tableView dequeueReusableCellWithIdentifier:@"TranscriptMessageCell" forIndexPath:indexPath];
+    Transcript *transcript = [self.dataSource chatSessionView:self transcriptAtIndex:indexPath.row];
     [cell configureWithTranscript:transcript];
     return cell;
 }

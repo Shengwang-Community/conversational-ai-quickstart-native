@@ -15,7 +15,7 @@ struct VoiceAgentApp: App {
     
     var body: some Scene {
         WindowGroup {
-            AgentView()
+            VoiceAgentRootView()
         }
     }
 }

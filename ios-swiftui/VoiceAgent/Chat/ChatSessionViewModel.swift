@@ -1,5 +1,5 @@
 //
-//  AgentViewModel.swift
+//  ChatSessionViewModel.swift
 //  VoiceAgent
 //
 
@@ -8,9 +8,9 @@ import SwiftUI
 import AgoraRtcKit
 import AgoraRtmKit
 
-class AgentViewModel: NSObject, ObservableObject {
-    @Published var showConfigView = true
-    @Published var showChatView = false
+class ChatSessionViewModel: NSObject, ObservableObject {
+    @Published var isShowingConnectionStartView = true
+    @Published var isShowingChatSessionView = false
     @Published var isLoading = false
     @Published var isError = false
     @Published var initializationError: Error?
@@ -110,8 +110,8 @@ class AgentViewModel: NSObject, ObservableObject {
 
                 await MainActor.run {
                     self.isLoading = false
-                    self.showConfigView = false
-                    self.showChatView = true
+                    self.isShowingConnectionStartView = false
+                    self.isShowingChatSessionView = true
                 }
             } catch {
                 await MainActor.run {
@@ -316,8 +316,8 @@ class AgentViewModel: NSObject, ObservableObject {
                 self.addDebugMessage("unsubscribe FAIL: \(error.message)")
             }
         })
-        showChatView = false
-        showConfigView = true
+        isShowingChatSessionView = false
+        isShowingConnectionStartView = true
         transcripts.removeAll()
         isMicMuted = false
         agentId = ""
@@ -329,7 +329,7 @@ class AgentViewModel: NSObject, ObservableObject {
     }
 }
 
-extension AgentViewModel: AgoraRtcEngineDelegate {
+extension ChatSessionViewModel: AgoraRtcEngineDelegate {
     func rtcEngine(_ engine: AgoraRtcEngineKit, didJoinChannel channel: String, withUid uid: UInt, elapsed: Int) {
         addDebugMessage("onJoinChannelSuccess")
     }
@@ -347,13 +347,13 @@ extension AgentViewModel: AgoraRtcEngineDelegate {
     }
 }
 
-extension AgentViewModel: AgoraRtmClientDelegate {
+extension ChatSessionViewModel: AgoraRtmClientDelegate {
     func rtmKit(_ rtmKit: AgoraRtmClientKit, didReceiveLinkStateEvent event: AgoraRtmLinkStateEvent) {
         addDebugMessage("RTM link state: \(event.currentState.rawValue)")
     }
 }
 
-extension AgentViewModel: ConversationalAIAPIEventHandler {
+extension ChatSessionViewModel: ConversationalAIAPIEventHandler {
     func onAgentVoiceprintStateChanged(agentUserId: String, event: VoiceprintStateChangeEvent) {
         addDebugMessage("onAgentVoiceprintStateChanged: \(event)")
     }

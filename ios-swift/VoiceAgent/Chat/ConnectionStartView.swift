@@ -8,7 +8,7 @@
 import UIKit
 import SnapKit
 
-class ConfigBackgroundView: UIView {
+class ConnectionStartView: UIView {
     // MARK: - UI Components
     let startButton = UIButton(type: .system)
 

@@ -1,12 +1,12 @@
 //
-//  AgentView.swift
+//  VoiceAgentRootView.swift
 //  VoiceAgent
 //
 
 import SwiftUI
 
-struct AgentView: View {
-    @StateObject private var viewModel = AgentViewModel()
+struct VoiceAgentRootView: View {
+    @StateObject private var viewModel = ChatSessionViewModel()
 
     var body: some View {
         VStack(spacing: 20) {
@@ -15,10 +15,10 @@ struct AgentView: View {
                 .padding(.horizontal, 20)
                 .padding(.top, 20)
 
-            if viewModel.showConfigView {
-                ConfigView(viewModel: viewModel)
+            if viewModel.isShowingConnectionStartView {
+                ConnectionStartView(viewModel: viewModel)
             } else {
-                ChatView(viewModel: viewModel)
+                ChatSessionView(viewModel: viewModel)
             }
         }
         .background(Color(.systemBackground))
@@ -77,8 +77,8 @@ struct UITextViewWrapper: UIViewRepresentable {
     }
 }
 
-struct ConfigView: View {
-    @ObservedObject var viewModel: AgentViewModel
+struct ConnectionStartView: View {
+    @ObservedObject var viewModel: ChatSessionViewModel
 
     var body: some View {
         VStack {
@@ -97,12 +97,12 @@ struct ConfigView: View {
     }
 }
 
-struct ChatView: View {
-    @ObservedObject var viewModel: AgentViewModel
+struct ChatSessionView: View {
+    @ObservedObject var viewModel: ChatSessionViewModel
 
     var body: some View {
         VStack(spacing: 8) {
-            TranscriptScrollView(transcripts: viewModel.transcripts)
+            TranscriptListView(transcripts: viewModel.transcripts)
                 .padding(.horizontal, 20)
 
             AgentStateView(state: viewModel.agentState)
@@ -140,14 +140,14 @@ struct ChatView: View {
     }
 }
 
-struct TranscriptScrollView: View {
+struct TranscriptListView: View {
     let transcripts: [Transcript]
 
     var body: some View {
         ScrollView {
             LazyVStack(spacing: 12) {
                 ForEach(Array(transcripts.enumerated()), id: \.offset) { _, transcript in
-                    TranscriptRow(transcript: transcript)
+                    TranscriptMessageRow(transcript: transcript)
                 }
             }
             .padding(16)
@@ -161,7 +161,7 @@ struct TranscriptScrollView: View {
     }
 }
 
-struct TranscriptRow: View {
+struct TranscriptMessageRow: View {
     let transcript: Transcript
 
     var isAgent: Bool { transcript.type == .agent }

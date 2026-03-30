@@ -9,7 +9,6 @@ import UIKit
 import SnapKit
 
 class AgentStateView: UIView {
-    private let dotView = UIView()
     private let statusLabel = UILabel()
 
     override init(frame: CGRect) {
@@ -29,33 +28,21 @@ class AgentStateView: UIView {
         layer.borderWidth = 0.5
         layer.borderColor = AppColors.borderDefault.cgColor
 
-        dotView.layer.cornerRadius = 5
-        dotView.backgroundColor = AppColors.stateIdle
-        addSubview(dotView)
-
         statusLabel.textColor = AppColors.textSubtitle
-        statusLabel.font = .systemFont(ofSize: 14)
+        statusLabel.font = .systemFont(ofSize: 14, weight: .medium)
+        statusLabel.textAlignment = .center
         addSubview(statusLabel)
     }
 
     private func setupConstraints() {
-        dotView.snp.makeConstraints { make in
-            make.centerY.equalToSuperview()
-            make.left.equalToSuperview().offset(16)
-            make.width.height.equalTo(10)
-        }
-
         statusLabel.snp.makeConstraints { make in
-            make.centerY.equalToSuperview()
-            make.left.equalTo(dotView.snp.right).offset(8)
-            make.right.equalToSuperview().offset(-16)
+            make.edges.equalToSuperview().inset(8)
         }
     }
 
     func updateState(_ state: AgentState) {
         if state == .unknown {
             isHidden = true
-            stopPulse()
             return
         }
 
@@ -73,27 +60,6 @@ class AgentStateView: UIView {
         }()
 
         statusLabel.text = text
-        dotView.backgroundColor = color
-
-        if state == .listening || state == .thinking || state == .speaking {
-            startPulse()
-        } else {
-            stopPulse()
-        }
-    }
-
-    private func startPulse() {
-        guard dotView.layer.animation(forKey: "pulse") == nil else { return }
-        let anim = CABasicAnimation(keyPath: "opacity")
-        anim.fromValue = 1.0
-        anim.toValue = 0.4
-        anim.duration = 1.0
-        anim.autoreverses = true
-        anim.repeatCount = .infinity
-        dotView.layer.add(anim, forKey: "pulse")
-    }
-
-    private func stopPulse() {
-        dotView.layer.removeAnimation(forKey: "pulse")
+        backgroundColor = color.withAlphaComponent(0.2)
     }
 }

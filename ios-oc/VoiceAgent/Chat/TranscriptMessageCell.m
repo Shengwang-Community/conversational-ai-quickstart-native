@@ -1,15 +1,22 @@
 //
-//  TranscriptCell.m
+//  TranscriptMessageCell.m
 //  VoiceAgent
 //
 //  Created by qinhui on 2025/11/17.
 //
 
-#import "TranscriptCell.h"
+#import "TranscriptMessageCell.h"
 #import <Masonry/Masonry.h>
 #import "VoiceAgent-Swift.h"
 
-@interface TranscriptCell ()
+static inline UIColor *VAHexColor(NSUInteger hexValue, CGFloat alpha) {
+    return [UIColor colorWithRed:((hexValue >> 16) & 0xFF) / 255.0
+                           green:((hexValue >> 8) & 0xFF) / 255.0
+                            blue:(hexValue & 0xFF) / 255.0
+                           alpha:alpha];
+}
+
+@interface TranscriptMessageCell ()
 
 @property (nonatomic, strong) UIView *avatarView;
 @property (nonatomic, strong) UILabel *avatarLabel;
@@ -22,7 +29,7 @@
 
 @end
 
-@implementation TranscriptCell
+@implementation TranscriptMessageCell
 
 - (instancetype)initWithStyle:(UITableViewCellStyle)style reuseIdentifier:(NSString *)reuseIdentifier {
     self = [super initWithStyle:style reuseIdentifier:reuseIdentifier];
@@ -85,10 +92,10 @@
 - (void)configureWithTranscript:(id)transcript {
     Transcript *t = (Transcript *)transcript;
     BOOL isAgent = t.type == TranscriptTypeAgent;
-    self.avatarView.backgroundColor = isAgent ? [UIColor systemBlueColor] : [UIColor systemGreenColor];
+    self.avatarView.backgroundColor = isAgent ? VAHexColor(0x3B82F6, 1.0) : VAHexColor(0x10B981, 1.0);
     self.avatarLabel.text = isAgent ? @"AI" : @"Me";
-    self.bubbleView.backgroundColor = isAgent ? [UIColor colorWithRed:0.93 green:0.96 blue:1 alpha:1] : [UIColor colorWithRed:0.91 green:0.98 blue:0.93 alpha:1];
-    self.messageLabel.textColor = isAgent ? [UIColor labelColor] : [UIColor labelColor];
+    self.bubbleView.backgroundColor = isAgent ? VAHexColor(0x334155, 1.0) : VAHexColor(0x2563EB, 1.0);
+    self.messageLabel.textColor = isAgent ? VAHexColor(0xF1F5F9, 1.0) : [UIColor whiteColor];
     self.messageLabel.text = t.text;
 
     if (isAgent) {

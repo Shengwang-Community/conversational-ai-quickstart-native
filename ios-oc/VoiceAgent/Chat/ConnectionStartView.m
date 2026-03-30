@@ -1,21 +1,27 @@
 //
-//  ConfigBackgroundView.m
+//  ConnectionStartView.m
 //  VoiceAgent
 //
 //  Created by qinhui on 2025/11/17.
 //
 
-#import "ConfigBackgroundView.h"
+#import "ConnectionStartView.h"
 #import <Masonry/Masonry.h>
 
-@interface ConfigBackgroundView ()
+static inline UIColor *VAHexColor(NSUInteger hexValue, CGFloat alpha) {
+    return [UIColor colorWithRed:((hexValue >> 16) & 0xFF) / 255.0
+                           green:((hexValue >> 8) & 0xFF) / 255.0
+                            blue:(hexValue & 0xFF) / 255.0
+                           alpha:alpha];
+}
 
-@property (nonatomic, strong, readwrite) UITextField *channelNameTextField;
+@interface ConnectionStartView ()
+
 @property (nonatomic, strong, readwrite) UIButton *startButton;
 
 @end
 
-@implementation ConfigBackgroundView
+@implementation ConnectionStartView
 
 - (instancetype)initWithFrame:(CGRect)frame {
     self = [super initWithFrame:frame];
@@ -33,29 +39,19 @@
 - (void)setupUI {
     self.backgroundColor = [UIColor clearColor];
     
-    // Hidden input kept only to minimize xcodeproj churn
-    self.channelNameTextField = [[UITextField alloc] init];
-    self.channelNameTextField.hidden = YES;
-    self.channelNameTextField.borderStyle = UITextBorderStyleRoundedRect;
-    [self addSubview:self.channelNameTextField];
-    
     self.startButton = [UIButton buttonWithType:UIButtonTypeSystem];
     [self.startButton setTitle:@"Start Agent" forState:UIControlStateNormal];
     [self.startButton setTitleColor:[UIColor whiteColor] forState:UIControlStateNormal];
     [self.startButton setTitleColor:[[UIColor whiteColor] colorWithAlphaComponent:0.5] 
                             forState:UIControlStateDisabled];
-    self.startButton.backgroundColor = [UIColor systemBlueColor];
+    self.startButton.titleLabel.font = [UIFont systemFontOfSize:14 weight:UIFontWeightMedium];
+    self.startButton.backgroundColor = VAHexColor(0x2563EB, 1.0);
     self.startButton.layer.cornerRadius = 8;
     self.startButton.enabled = YES;
     [self addSubview:self.startButton];
 }
 
 - (void)setupConstraints {
-    [self.channelNameTextField mas_makeConstraints:^(MASConstraintMaker *make) {
-        make.top.left.equalTo(self);
-        make.width.height.mas_equalTo(0);
-    }];
-    
     [self.startButton mas_makeConstraints:^(MASConstraintMaker *make) {
         make.left.right.equalTo(self).inset(20);
         make.bottom.equalTo(self.mas_safeAreaLayoutGuideBottom).offset(-20);
@@ -66,8 +62,8 @@
 - (void)updateButtonState:(BOOL)isEnabled {
     self.startButton.enabled = isEnabled;
     self.startButton.backgroundColor = isEnabled ? 
-        [UIColor systemBlueColor] : 
-        [[UIColor systemGrayColor] colorWithAlphaComponent:0.6];
+        VAHexColor(0x2563EB, 1.0) : 
+        VAHexColor(0x334155, 1.0);
 }
 
 @end

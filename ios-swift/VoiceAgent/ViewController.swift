@@ -12,8 +12,8 @@ import AgoraRtmKit
 
 class ViewController: UIViewController {
     // MARK: - UI Components
-    private let configBackgroundView = ConfigBackgroundView()
-    private let chatBackgroundView = ChatBackgroundView()
+    private let connectionStartView = ConnectionStartView()
+    private let chatSessionView = ChatSessionView()
     private let debugInfoTextView = UITextView()
     
     // MARK: - State
@@ -89,17 +89,18 @@ class ViewController: UIViewController {
         debugInfoTextView.indicatorStyle = .white
         view.addSubview(debugInfoTextView)
         
-        // Config Background View
-        view.addSubview(configBackgroundView)
-        configBackgroundView.startButton.addTarget(self, action: #selector(startButtonTapped), for: .touchUpInside)
+        // Connection Start View
+        view.addSubview(connectionStartView)
+        connectionStartView.startButton.addTarget(self, action: #selector(startButtonTapped), for: .touchUpInside)
         
-        // Chat Background View
-        chatBackgroundView.isHidden = true
-        view.addSubview(chatBackgroundView)
-        chatBackgroundView.tableView.delegate = self
-        chatBackgroundView.tableView.dataSource = self
-        chatBackgroundView.micButton.addTarget(self, action: #selector(toggleMicrophone), for: .touchUpInside)
-        chatBackgroundView.endCallButton.addTarget(self, action: #selector(endCall), for: .touchUpInside)
+        // Chat Session View
+        chatSessionView.isHidden = true
+        view.addSubview(chatSessionView)
+        chatSessionView.tableView.delegate = self
+        chatSessionView.tableView.dataSource = self
+        chatSessionView.applyTableBackgroundWorkaround()
+        chatSessionView.micButton.addTarget(self, action: #selector(toggleMicrophone), for: .touchUpInside)
+        chatSessionView.endCallButton.addTarget(self, action: #selector(endCall), for: .touchUpInside)
     }
     
     private func setupConstraints() {
@@ -110,14 +111,14 @@ class ViewController: UIViewController {
             make.height.equalTo(120)
         }
         
-        // Config Background View (below debug view)
-        configBackgroundView.snp.makeConstraints { make in
+        // Connection Start View (below debug view)
+        connectionStartView.snp.makeConstraints { make in
             make.top.equalTo(debugInfoTextView.snp.bottom).offset(20)
             make.left.right.bottom.equalToSuperview()
         }
         
-        // Chat Background View (below debug view)
-        chatBackgroundView.snp.makeConstraints { make in
+        // Chat Session View (below debug view)
+        chatSessionView.snp.makeConstraints { make in
             make.top.equalTo(debugInfoTextView.snp.bottom).offset(20)
             make.left.right.bottom.equalToSuperview()
         }
@@ -399,13 +400,13 @@ class ViewController: UIViewController {
     
     // MARK: - View Management
     private func switchToChatView() {
-        configBackgroundView.isHidden = true
-        chatBackgroundView.isHidden = false
+        connectionStartView.isHidden = true
+        chatSessionView.isHidden = false
     }
     
     private func switchToConfigView() {
-        chatBackgroundView.isHidden = true
-        configBackgroundView.isHidden = false
+        chatSessionView.isHidden = true
+        connectionStartView.isHidden = false
     }
     
     private func resetConnectionState() {
@@ -418,11 +419,11 @@ class ViewController: UIViewController {
         switchToConfigView()
         
         transcripts.removeAll()
-        chatBackgroundView.tableView.reloadData()
+        chatSessionView.tableView.reloadData()
         clearDebugMessages()
         isMicMuted = false
         currentAgentState = .unknown
-        chatBackgroundView.updateStatusView(state: .unknown)
+        chatSessionView.updateStatusView(state: .unknown)
         agentId = ""
         token = ""
         agentToken = ""
@@ -430,7 +431,7 @@ class ViewController: UIViewController {
     
     // MARK: - UI Updates
     private func updateAgentStatusView() {
-        chatBackgroundView.updateStatusView(state: currentAgentState)
+        chatSessionView.updateStatusView(state: currentAgentState)
     }
     
     // MARK: - Actions
@@ -441,7 +442,7 @@ class ViewController: UIViewController {
     
     @objc private func toggleMicrophone() {
         isMicMuted.toggle()
-        chatBackgroundView.updateMicButtonState(isMuted: isMicMuted)
+        chatSessionView.updateMicButtonState(isMuted: isMicMuted)
         rtcEngine?.adjustRecordingSignalVolume(isMicMuted ? 0 : 100)
     }
     
@@ -517,7 +518,7 @@ extension ViewController: UITableViewDataSource, UITableViewDelegate {
     }
     
     func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
-        let cell = tableView.dequeueReusableCell(withIdentifier: "TranscriptCell", for: indexPath) as! TranscriptCell
+        let cell = tableView.dequeueReusableCell(withIdentifier: TranscriptMessageCell.reuseIdentifier, for: indexPath) as! TranscriptMessageCell
         cell.configure(with: transcripts[indexPath.row])
         return cell
     }
@@ -615,11 +616,11 @@ extension ViewController: ConversationalAIAPIEventHandler {
                 self.transcripts.append(transcript)
             }
             
-            self.chatBackgroundView.tableView.reloadData()
+            self.chatSessionView.tableView.reloadData()
             
             if !self.transcripts.isEmpty {
                 let indexPath = IndexPath(row: self.transcripts.count - 1, section: 0)
-                self.chatBackgroundView.tableView.scrollToRow(at: indexPath, at: .bottom, animated: true)
+                self.chatSessionView.tableView.scrollToRow(at: indexPath, at: .bottom, animated: true)
             }
         }
     }

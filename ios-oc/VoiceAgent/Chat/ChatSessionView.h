@@ -1,5 +1,5 @@
 //
-//  ChatBackgroundView.h
+//  ChatSessionView.h
 //  VoiceAgent
 //
 //  Created by qinhui on 2025/11/17.
@@ -11,18 +11,18 @@
 
 NS_ASSUME_NONNULL_BEGIN
 
-@class ChatBackgroundView;
+@class ChatSessionView;
 
-@protocol ChatBackgroundViewDataSource <NSObject>
+@protocol ChatSessionViewDataSource <NSObject>
 
-- (NSInteger)numberOfTranscriptsInChatBackgroundView:(ChatBackgroundView *)view;
-- (Transcript *_Nullable)chatBackgroundView:(ChatBackgroundView *)view transcriptAtIndex:(NSInteger)index;
+- (NSInteger)numberOfTranscriptsInChatSessionView:(ChatSessionView *)view;
+- (Transcript *_Nullable)chatSessionView:(ChatSessionView *)view transcriptAtIndex:(NSInteger)index;
 
 @end
 
-@interface ChatBackgroundView : UIView <UITableViewDataSource, UITableViewDelegate>
+@interface ChatSessionView : UIView <UITableViewDataSource, UITableViewDelegate>
 
-@property(nonatomic, weak) id<ChatBackgroundViewDataSource> dataSource;
+@property(nonatomic, weak) id<ChatSessionViewDataSource> dataSource;
 @property(nonatomic, strong, readonly) UITableView *tableView;
 @property(nonatomic, strong, readonly) AgentStateView *statusView;
 @property(nonatomic, strong, readonly) UIButton *micButton;
