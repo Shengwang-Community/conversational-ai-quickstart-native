@@ -32,10 +32,22 @@ public:
 #endif
 
 private:
+    enum class StatusTone {
+        Hidden,
+        Neutral,
+        Success,
+        Warning,
+        Info,
+        Error
+    };
+
     // UI Components
     CStatic m_topPanel;
     CStatic m_logPanel;
     CStatic m_bottomPanel;
+    CStatic m_headerTitle;
+    CStatic m_headerSubtitle;
+    CStatic m_logTitle;
     CListCtrl m_listMessages;
     CListCtrl m_listLog;
     CStatic m_labelAgentStatus;
@@ -44,6 +56,14 @@ private:
     CButton m_btnMute;
     CFont m_normalFont;
     CFont m_smallFont;
+    CFont m_titleFont;
+    CFont m_subtitleFont;
+    CBrush m_brushWindow;
+    CBrush m_brushCard;
+    CBrush m_brushStatus;
+    COLORREF m_statusTextColor;
+    StatusTone m_statusTone;
+    CString m_statusText;
     
     // Agora SDK (direct management like macOS)
     agora::rtc::IRtcEngine* m_rtcEngine;
@@ -81,9 +101,16 @@ private:
     void SetupLogPanel();
     void SetupBottomPanel();
     void LayoutPanels();
+    void ApplyListTheme(CListCtrl& list, int width);
+    CRect GetMessagesCardRect() const;
+    CRect GetStatusRect() const;
+    CRect GetControlBarRect() const;
+    CRect GetLogCardRect() const;
+    void DrawRoundedCard(CDC& dc, const CRect& rect, COLORREF fillColor, COLORREF borderColor, int radius) const;
+    void RefreshStatusBrush();
     
     // UI Helpers
-    void UpdateAgentStatus(const CString& message);
+    void UpdateAgentStatus(const CString& message, StatusTone tone = StatusTone::Neutral);
     void ShowIdleButtons();
     void ShowActiveButtons();
     void UpdateTranscripts();
@@ -127,6 +154,11 @@ private:
 protected:
     afx_msg int OnCreate(LPCREATESTRUCT lpCreateStruct);
     afx_msg void OnSize(UINT nType, int cx, int cy);
+    afx_msg void OnPaint();
+    afx_msg BOOL OnEraseBkgnd(CDC* pDC);
+    afx_msg HBRUSH OnCtlColor(CDC* pDC, CWnd* pWnd, UINT nCtlColor);
+    afx_msg void OnCustomDrawMessages(NMHDR* pNMHDR, LRESULT* pResult);
+    afx_msg void OnCustomDrawLogs(NMHDR* pNMHDR, LRESULT* pResult);
     afx_msg void OnStartClicked();
     afx_msg void OnStopClicked();
     afx_msg void OnMuteClicked();

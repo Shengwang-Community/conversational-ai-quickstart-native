@@ -33,14 +33,33 @@
 #define IDC_LIST_MESSAGES 2004
 #define IDC_LIST_LOG      2005
 
+namespace {
+constexpr COLORREF kWindowBg = RGB(15, 23, 42);
+constexpr COLORREF kCardBg = RGB(30, 41, 59);
+constexpr COLORREF kCardBorder = RGB(51, 65, 85);
+constexpr COLORREF kTextPrimary = RGB(241, 245, 249);
+constexpr COLORREF kTextSecondary = RGB(148, 163, 184);
+constexpr COLORREF kUserBubble = RGB(37, 99, 235);
+constexpr COLORREF kStatusNeutral = RGB(71, 85, 105);
+constexpr COLORREF kStatusSuccess = RGB(16, 185, 129);
+constexpr COLORREF kStatusWarning = RGB(245, 158, 11);
+constexpr COLORREF kStatusInfo = RGB(59, 130, 246);
+constexpr COLORREF kStatusError = RGB(239, 68, 68);
+}
+
 IMPLEMENT_DYNAMIC(CMainFrame, CFrameWnd)
 
 BEGIN_MESSAGE_MAP(CMainFrame, CFrameWnd)
     ON_WM_CREATE()
     ON_WM_SIZE()
+    ON_WM_PAINT()
+    ON_WM_ERASEBKGND()
+    ON_WM_CTLCOLOR()
     ON_BN_CLICKED(IDC_BTN_START, &CMainFrame::OnStartClicked)
     ON_BN_CLICKED(IDC_BTN_STOP, &CMainFrame::OnStopClicked)
     ON_BN_CLICKED(IDC_BTN_MUTE, &CMainFrame::OnMuteClicked)
+    ON_NOTIFY(NM_CUSTOMDRAW, IDC_LIST_MESSAGES, &CMainFrame::OnCustomDrawMessages)
+    ON_NOTIFY(NM_CUSTOMDRAW, IDC_LIST_LOG, &CMainFrame::OnCustomDrawLogs)
     ON_MESSAGE(WM_TOKEN_FAILED, &CMainFrame::OnTokenFailed)
     ON_MESSAGE(WM_RTM_LOGIN_SUCCESS, &CMainFrame::OnRTMLoginSuccess)
     ON_MESSAGE(WM_RTM_LOGIN_FAILED, &CMainFrame::OnRTMLoginFailed)
@@ -65,6 +84,12 @@ CMainFrame::CMainFrame() noexcept
     , m_rtmLoggedIn(false)
     , m_userUid(GenerateRandomUid())
     , m_agentUid(GenerateRandomUid())
+    , m_brushWindow(kWindowBg)
+    , m_brushCard(kCardBg)
+    , m_brushStatus(kStatusNeutral)
+    , m_statusTextColor(kTextSecondary)
+    , m_statusTone(StatusTone::Hidden)
+    , m_statusText(_T(""))
 {
     while (m_agentUid == m_userUid) {
         m_agentUid = GenerateRandomUid();
@@ -118,6 +143,8 @@ int CMainFrame::OnCreate(LPCREATESTRUCT lpCreateStruct)
 
     m_normalFont.CreatePointFont(90, _T("Segoe UI"));
     m_smallFont.CreatePointFont(80, _T("Consolas"));
+    m_titleFont.CreatePointFont(180, _T("Segoe UI Semibold"));
+    m_subtitleFont.CreatePointFont(90, _T("Segoe UI"));
     
     SetupUI();
     SetupSDK();
@@ -145,14 +172,23 @@ void CMainFrame::SetupUI()
 void CMainFrame::SetupTopPanel()
 {
     m_topPanel.Create(_T(""), WS_CHILD | WS_VISIBLE, CRect(0, 0, 10, 10), this);
+
+    m_headerTitle.Create(_T("Voice Agent"), WS_CHILD | WS_VISIBLE | SS_LEFT,
+        CRect(0, 0, 10, 10), this);
+    m_headerTitle.SetFont(&m_titleFont);
+
+    m_headerSubtitle.Create(_T("Real-time conversation with your AI assistant"), WS_CHILD | WS_VISIBLE | SS_LEFT,
+        CRect(0, 0, 10, 10), this);
+    m_headerSubtitle.SetFont(&m_subtitleFont);
     
     m_listMessages.Create(WS_CHILD | WS_VISIBLE | WS_BORDER | LVS_REPORT | LVS_NOCOLUMNHEADER,
         CRect(0, 0, 10, 10), this, IDC_LIST_MESSAGES);
     m_listMessages.SetFont(&m_normalFont);
-    m_listMessages.SetExtendedStyle(LVS_EX_FULLROWSELECT);
+    m_listMessages.SetExtendedStyle(LVS_EX_FULLROWSELECT | LVS_EX_DOUBLEBUFFER);
     m_listMessages.InsertColumn(0, _T("Messages"), LVCFMT_LEFT, 500);
+    ApplyListTheme(m_listMessages, 500);
     
-    m_labelAgentStatus.Create(_T("Agent: Not Started"), WS_CHILD | WS_VISIBLE | SS_RIGHT,
+    m_labelAgentStatus.Create(_T(""), WS_CHILD | WS_VISIBLE | SS_CENTER,
         CRect(0, 0, 10, 10), this);
     m_labelAgentStatus.SetFont(&m_normalFont);
 }
@@ -160,12 +196,17 @@ void CMainFrame::SetupTopPanel()
 void CMainFrame::SetupLogPanel()
 {
     m_logPanel.Create(_T(""), WS_CHILD | WS_VISIBLE | SS_ETCHEDFRAME, CRect(0, 0, 10, 10), this);
+
+    m_logTitle.Create(_T("Debug Log"), WS_CHILD | WS_VISIBLE | SS_LEFT,
+        CRect(0, 0, 10, 10), this);
+    m_logTitle.SetFont(&m_subtitleFont);
     
     m_listLog.Create(WS_CHILD | WS_VISIBLE | WS_BORDER | LVS_REPORT | LVS_NOCOLUMNHEADER,
         CRect(0, 0, 10, 10), this, IDC_LIST_LOG);
     m_listLog.SetFont(&m_smallFont);
-    m_listLog.SetExtendedStyle(LVS_EX_FULLROWSELECT);
+    m_listLog.SetExtendedStyle(LVS_EX_FULLROWSELECT | LVS_EX_DOUBLEBUFFER);
     m_listLog.InsertColumn(0, _T("Log"), LVCFMT_LEFT, LOG_PANEL_WIDTH - 20);
+    ApplyListTheme(m_listLog, LOG_PANEL_WIDTH - 20);
 }
 
 void CMainFrame::SetupBottomPanel()
@@ -191,26 +232,47 @@ void CMainFrame::LayoutPanels()
     GetClientRect(&rc);
     if (rc.Width() <= 0 || rc.Height() <= 0) return;
     
-    int logLeft = rc.right - LOG_PANEL_WIDTH;
-    int bottomTop = rc.bottom - BOTTOM_PANEL_HEIGHT;
-    int contentWidth = logLeft - PADDING;
-    int msgWidth = contentWidth - PADDING * 2;
-    int btnY = bottomTop + (BOTTOM_PANEL_HEIGHT - BUTTON_HEIGHT) / 2;
-    int halfWidth = msgWidth / 2;
-    
-    m_logPanel.MoveWindow(logLeft, 0, LOG_PANEL_WIDTH, rc.Height());
-    m_listLog.MoveWindow(logLeft, 0, LOG_PANEL_WIDTH, rc.Height());
-    m_listLog.SetColumnWidth(0, LOG_PANEL_WIDTH - 20);
-    
-    m_topPanel.MoveWindow(0, 0, contentWidth, bottomTop);
-    m_listMessages.MoveWindow(PADDING, PADDING, msgWidth, bottomTop - PADDING - 30);
-    m_listMessages.SetColumnWidth(0, msgWidth - 20);
-    m_labelAgentStatus.MoveWindow(PADDING, bottomTop - 25, msgWidth, 20);
-    
-    m_bottomPanel.MoveWindow(0, bottomTop, contentWidth, BOTTOM_PANEL_HEIGHT);
-    m_btnStart.MoveWindow(PADDING, btnY, msgWidth, BUTTON_HEIGHT);
-    m_btnMute.MoveWindow(PADDING, btnY, halfWidth, BUTTON_HEIGHT);
-    m_btnStop.MoveWindow(PADDING + halfWidth, btnY, halfWidth, BUTTON_HEIGHT);
+    CRect logCard = GetLogCardRect();
+    CRect controlBar = GetControlBarRect();
+    CRect statusRect = GetStatusRect();
+    CRect messagesCard = GetMessagesCardRect();
+
+    const int contentWidth = logCard.left - PADDING;
+    const int titleTop = PADDING + 8;
+    const int titleHeight = 34;
+    const int subtitleTop = titleTop + titleHeight + 4;
+    const int subtitleHeight = 20;
+    const int listInset = 14;
+    const int logHeaderHeight = 22;
+    const int buttonY = controlBar.top + (controlBar.Height() - BUTTON_HEIGHT) / 2;
+    const int stopWidth = 120;
+    const int muteWidth = 96;
+    const int startX = controlBar.left + 12;
+    const int startWidth = controlBar.Width() - 24;
+    const int stopX = controlBar.right - 12 - stopWidth;
+    const int muteX = stopX - 12 - muteWidth;
+
+    m_topPanel.MoveWindow(0, 0, contentWidth, controlBar.top);
+    m_headerTitle.MoveWindow(PADDING, titleTop, contentWidth - PADDING * 2, titleHeight);
+    m_headerSubtitle.MoveWindow(PADDING, subtitleTop, contentWidth - PADDING * 2, subtitleHeight);
+
+    m_listMessages.MoveWindow(messagesCard.left + listInset, messagesCard.top + listInset,
+        messagesCard.Width() - listInset * 2, messagesCard.Height() - listInset * 2);
+    m_listMessages.SetColumnWidth(0, messagesCard.Width() - listInset * 2 - 8);
+
+    m_labelAgentStatus.MoveWindow(statusRect.left, statusRect.top, statusRect.Width(), statusRect.Height());
+
+    m_bottomPanel.MoveWindow(controlBar.left, controlBar.top, controlBar.Width(), controlBar.Height());
+    m_btnStart.MoveWindow(startX, buttonY, startWidth, BUTTON_HEIGHT);
+    m_btnMute.MoveWindow(muteX, buttonY, muteWidth, BUTTON_HEIGHT);
+    m_btnStop.MoveWindow(stopX, buttonY, stopWidth, BUTTON_HEIGHT);
+
+    m_logPanel.MoveWindow(logCard.left, logCard.top, logCard.Width(), logCard.Height());
+    m_logTitle.MoveWindow(logCard.left + 14, logCard.top + 12, logCard.Width() - 28, logHeaderHeight);
+    m_listLog.MoveWindow(logCard.left + 14, logCard.top + 40, logCard.Width() - 28, logCard.Height() - 54);
+    m_listLog.SetColumnWidth(0, logCard.Width() - 36);
+
+    Invalidate(FALSE);
 }
 
 void CMainFrame::OnSize(UINT nType, int cx, int cy)
@@ -225,11 +287,101 @@ void CMainFrame::OnSize(UINT nType, int cx, int cy)
 // UI Helpers
 // =============================================================================
 
-void CMainFrame::UpdateAgentStatus(const CString& status)
+void CMainFrame::ApplyListTheme(CListCtrl& list, int width)
 {
-    CString text;
-    text.Format(_T("Agent: %s"), status);
-    m_labelAgentStatus.SetWindowText(text);
+    list.SetBkColor(kCardBg);
+    list.SetTextBkColor(kCardBg);
+    list.SetTextColor(kTextPrimary);
+    list.SetColumnWidth(0, width);
+}
+
+CRect CMainFrame::GetMessagesCardRect() const
+{
+    CRect rc;
+    const_cast<CMainFrame*>(this)->GetClientRect(&rc);
+    const int logLeft = rc.right - LOG_PANEL_WIDTH;
+    const int contentWidth = logLeft - PADDING;
+    const int controlTop = rc.bottom - BOTTOM_PANEL_HEIGHT - PADDING;
+    const int statusHeight = 40;
+    const int headerBottom = PADDING + 72;
+
+    return CRect(PADDING, headerBottom, contentWidth - PADDING, controlTop - statusHeight - 16);
+}
+
+CRect CMainFrame::GetStatusRect() const
+{
+    CRect rc;
+    const_cast<CMainFrame*>(this)->GetClientRect(&rc);
+    const int logLeft = rc.right - LOG_PANEL_WIDTH;
+    const int contentWidth = logLeft - PADDING;
+    const int controlTop = rc.bottom - BOTTOM_PANEL_HEIGHT - PADDING;
+    return CRect(PADDING, controlTop - 48, contentWidth - PADDING, controlTop - 8);
+}
+
+CRect CMainFrame::GetControlBarRect() const
+{
+    CRect rc;
+    const_cast<CMainFrame*>(this)->GetClientRect(&rc);
+    const int logLeft = rc.right - LOG_PANEL_WIDTH;
+    const int contentWidth = logLeft - PADDING;
+    return CRect(PADDING, rc.bottom - BOTTOM_PANEL_HEIGHT - PADDING, contentWidth - PADDING, rc.bottom - PADDING);
+}
+
+CRect CMainFrame::GetLogCardRect() const
+{
+    CRect rc;
+    const_cast<CMainFrame*>(this)->GetClientRect(&rc);
+    return CRect(rc.right - LOG_PANEL_WIDTH, PADDING, rc.right - PADDING, rc.bottom - PADDING);
+}
+
+void CMainFrame::DrawRoundedCard(CDC& dc, const CRect& rect, COLORREF fillColor, COLORREF borderColor, int radius) const
+{
+    CPen pen(PS_SOLID, 1, borderColor);
+    CBrush brush(fillColor);
+    CPen* oldPen = dc.SelectObject(&pen);
+    CBrush* oldBrush = dc.SelectObject(&brush);
+    dc.RoundRect(rect, CPoint(radius, radius));
+    dc.SelectObject(oldBrush);
+    dc.SelectObject(oldPen);
+}
+
+void CMainFrame::RefreshStatusBrush()
+{
+    COLORREF color = kStatusNeutral;
+    switch (m_statusTone) {
+    case StatusTone::Hidden:
+    case StatusTone::Neutral:
+        color = kStatusNeutral;
+        break;
+    case StatusTone::Success:
+        color = kStatusSuccess;
+        break;
+    case StatusTone::Warning:
+        color = kStatusWarning;
+        break;
+    case StatusTone::Info:
+        color = kStatusInfo;
+        break;
+    case StatusTone::Error:
+        color = kStatusError;
+        break;
+    }
+
+    m_brushStatus.DeleteObject();
+    m_brushStatus.CreateSolidBrush(color);
+    m_statusTextColor = kTextPrimary;
+}
+
+void CMainFrame::UpdateAgentStatus(const CString& status, StatusTone tone)
+{
+    m_statusText = status;
+    m_statusTone = tone;
+    RefreshStatusBrush();
+    m_labelAgentStatus.SetWindowText(status);
+    m_labelAgentStatus.ShowWindow(tone == StatusTone::Hidden ? SW_HIDE : SW_SHOW);
+    if (GetSafeHwnd()) {
+        InvalidateRect(GetStatusRect(), FALSE);
+    }
 }
 
 void CMainFrame::ShowIdleButtons()
@@ -254,8 +406,14 @@ void CMainFrame::UpdateTranscripts()
     m_listMessages.DeleteAllItems();
     for (size_t i = 0; i < m_transcripts.size(); ++i) {
         const Transcript& t = m_transcripts[i];
-        CString prefix = (t.type == TranscriptType::Agent) ? _T("[Agent] ") : _T("[User] ");
-        m_listMessages.InsertItem((int)i, prefix + StringUtils::Utf8ToCString(t.text));
+        CString role = (t.type == TranscriptType::Agent) ? _T("Agent") : _T("User");
+        CString content = StringUtils::Utf8ToCString(t.text);
+        CString row;
+        row.Format(_T("%s  •  %s"), role, content);
+        if (t.status != TranscriptStatus::End) {
+            row += _T(" ...");
+        }
+        m_listMessages.InsertItem((int)i, row);
     }
     if (!m_transcripts.empty()) {
         m_listMessages.EnsureVisible((int)m_transcripts.size() - 1, FALSE);
@@ -287,7 +445,7 @@ void CMainFrame::SetupSDK()
     m_listLog.DeleteAllItems();
     InitializeRTC();
     InitializeRTM();
-    UpdateAgentStatus(_T("Not Started"));
+    UpdateAgentStatus(_T("Ready to start"), StatusTone::Hidden);
 }
 
 void CMainFrame::InitializeRTC()
@@ -390,7 +548,7 @@ void CMainFrame::StartSession()
     m_rtcJoined = false;
     m_rtmLoggedIn = false;
     m_listMessages.DeleteAllItems();
-    UpdateAgentStatus(_T("Generating token..."));
+    UpdateAgentStatus(_T("Generating token..."), StatusTone::Warning);
     
     std::vector<AgoraTokenType> types = { AgoraTokenType::RTC, AgoraTokenType::RTM };
     TokenGenerator::GenerateToken("", std::to_string(m_userUid), 86400, types,
@@ -403,7 +561,7 @@ void CMainFrame::StartSession()
             }
             LogToView(_T("Token OK"));
             m_userToken = token;
-            UpdateAgentStatus(_T("Joining..."));
+            UpdateAgentStatus(_T("Joining channel..."), StatusTone::Info);
             JoinRTCChannel(token);
             LoginRTM(token);
         });
@@ -411,7 +569,7 @@ void CMainFrame::StartSession()
 
 void CMainFrame::StopSession()
 {
-    UpdateAgentStatus(_T("Stopping..."));
+    UpdateAgentStatus(_T("Stopping agent..."), StatusTone::Warning);
     
     if (m_convoAIAPI) {
         m_convoAIAPI->RemoveHandler(this);
@@ -445,7 +603,7 @@ void CMainFrame::StopSession()
     m_listMessages.DeleteAllItems();
     m_btnMute.SetWindowText(_T("Mute"));
     ShowIdleButtons();
-    UpdateAgentStatus(_T("Not Started"));
+    UpdateAgentStatus(_T("Ready to start"), StatusTone::Hidden);
 }
 
 void CMainFrame::JoinRTCChannel(const std::string& token)
@@ -484,7 +642,7 @@ void CMainFrame::LoginRTM(const std::string& token)
 
 void CMainFrame::StartAgent()
 {
-    UpdateAgentStatus(_T("Starting agent..."));
+    UpdateAgentStatus(_T("Starting agent..."), StatusTone::Warning);
     
     std::vector<AgoraTokenType> types = { AgoraTokenType::RTC, AgoraTokenType::RTM };
     TokenGenerator::GenerateToken(m_channelName, std::to_string(m_agentUid), 86400, types,
@@ -546,7 +704,7 @@ void CMainFrame::CheckJoinAndLoginComplete()
         return;
     }
 
-    UpdateAgentStatus(_T("Starting agent..."));
+    UpdateAgentStatus(_T("Starting agent..."), StatusTone::Warning);
     InitializeConvoAI();
     StartAgent();
 }
@@ -601,7 +759,7 @@ void CMainFrame::onError(int err, const char*)
     CString msg;
     msg.Format(_T("onError code=%d"), err);
     LogToView(msg);
-    UpdateAgentStatus(msg);
+    UpdateAgentStatus(msg, StatusTone::Error);
 }
 
 // =============================================================================
@@ -732,7 +890,7 @@ void CMainFrame::OnDebugLog(const std::string& log)
 
 LRESULT CMainFrame::OnTokenFailed(WPARAM, LPARAM)
 {
-    UpdateAgentStatus(_T("Token failed"));
+    UpdateAgentStatus(_T("Token failed"), StatusTone::Error);
     ShowIdleButtons();
     return 0;
 }
@@ -754,7 +912,7 @@ LRESULT CMainFrame::OnRTMLoginSuccess(WPARAM, LPARAM)
 
 LRESULT CMainFrame::OnRTMLoginFailed(WPARAM, LPARAM)
 {
-    UpdateAgentStatus(_T("RTM login failed"));
+    UpdateAgentStatus(_T("RTM login failed"), StatusTone::Error);
     ShowIdleButtons();
     return 0;
 }
@@ -762,26 +920,26 @@ LRESULT CMainFrame::OnRTMLoginFailed(WPARAM, LPARAM)
 LRESULT CMainFrame::OnAgentStarted(WPARAM, LPARAM)
 {
     ShowActiveButtons();
-    UpdateAgentStatus(_T("Launching..."));
+    UpdateAgentStatus(_T("Launching..."), StatusTone::Info);
     return 0;
 }
 
 LRESULT CMainFrame::OnAgentStartFailed(WPARAM, LPARAM)
 {
-    UpdateAgentStatus(_T("Start failed"));
+    UpdateAgentStatus(_T("Start failed"), StatusTone::Error);
     StopSession();
     return 0;
 }
 
 LRESULT CMainFrame::OnAgentJoined(WPARAM, LPARAM)
 {
-    if (m_isActive) UpdateAgentStatus(_T("Connected"));
+    if (m_isActive) UpdateAgentStatus(_T("Connected"), StatusTone::Success);
     return 0;
 }
 
 LRESULT CMainFrame::OnAgentLeft(WPARAM, LPARAM)
 {
-    if (m_isActive) UpdateAgentStatus(_T("Disconnected"));
+    if (m_isActive) UpdateAgentStatus(_T("Disconnected"), StatusTone::Error);
     return 0;
 }
 
@@ -795,6 +953,115 @@ LRESULT CMainFrame::OnAgentStateUpdate(WPARAM wParam, LPARAM)
 {
     static const TCHAR* states[] = { _T("Idle"), _T("Silent"), _T("Listening"), _T("Thinking"), _T("Speaking"), _T("Unknown") };
     int idx = (int)wParam;
-    UpdateAgentStatus(idx >= 0 && idx < 5 ? states[idx] : states[5]);
+    StatusTone tone = StatusTone::Neutral;
+    if (idx == 2) tone = StatusTone::Success;
+    else if (idx == 3) tone = StatusTone::Warning;
+    else if (idx == 4) tone = StatusTone::Info;
+    UpdateAgentStatus(idx >= 0 && idx < 5 ? states[idx] : states[5], tone);
     return 0;
+}
+
+void CMainFrame::OnPaint()
+{
+    CPaintDC dc(this);
+    CRect rc;
+    GetClientRect(&rc);
+    dc.FillSolidRect(&rc, kWindowBg);
+
+    DrawRoundedCard(dc, GetMessagesCardRect(), kCardBg, kCardBorder, 18);
+    if (m_statusTone != StatusTone::Hidden) {
+        COLORREF statusColor = kStatusNeutral;
+        switch (m_statusTone) {
+        case StatusTone::Success:
+            statusColor = kStatusSuccess;
+            break;
+        case StatusTone::Warning:
+            statusColor = kStatusWarning;
+            break;
+        case StatusTone::Info:
+            statusColor = kStatusInfo;
+            break;
+        case StatusTone::Error:
+            statusColor = kStatusError;
+            break;
+        case StatusTone::Hidden:
+        case StatusTone::Neutral:
+        default:
+            statusColor = kStatusNeutral;
+            break;
+        }
+        DrawRoundedCard(dc, GetStatusRect(), statusColor, kCardBorder, 16);
+    }
+    DrawRoundedCard(dc, GetControlBarRect(), kCardBg, kCardBorder, 18);
+    DrawRoundedCard(dc, GetLogCardRect(), kCardBg, kCardBorder, 18);
+}
+
+BOOL CMainFrame::OnEraseBkgnd(CDC*)
+{
+    return TRUE;
+}
+
+HBRUSH CMainFrame::OnCtlColor(CDC* pDC, CWnd* pWnd, UINT nCtlColor)
+{
+    HBRUSH brush = CFrameWnd::OnCtlColor(pDC, pWnd, nCtlColor);
+
+    if (!pWnd) {
+        return brush;
+    }
+
+    const UINT id = pWnd->GetDlgCtrlID();
+    if (pWnd == &m_headerTitle || pWnd == &m_headerSubtitle || pWnd == &m_logTitle || pWnd == &m_labelAgentStatus) {
+        pDC->SetBkMode(TRANSPARENT);
+        pDC->SetTextColor(pWnd == &m_headerTitle ? kTextPrimary : (pWnd == &m_labelAgentStatus ? m_statusTextColor : kTextSecondary));
+        return static_cast<HBRUSH>(GetStockObject(NULL_BRUSH));
+    }
+
+    if (nCtlColor == CTLCOLOR_BTN) {
+        pDC->SetBkMode(TRANSPARENT);
+        pDC->SetTextColor(kTextPrimary);
+        return (id == IDC_BTN_START || id == IDC_BTN_MUTE || id == IDC_BTN_STOP) ? static_cast<HBRUSH>(m_brushCard.GetSafeHandle()) : brush;
+    }
+
+    if (nCtlColor == CTLCOLOR_STATIC) {
+        pDC->SetBkMode(TRANSPARENT);
+        pDC->SetTextColor(kTextSecondary);
+        return static_cast<HBRUSH>(GetStockObject(NULL_BRUSH));
+    }
+
+    return brush;
+}
+
+void CMainFrame::OnCustomDrawMessages(NMHDR* pNMHDR, LRESULT* pResult)
+{
+    LPNMLVCUSTOMDRAW pDraw = reinterpret_cast<LPNMLVCUSTOMDRAW>(pNMHDR);
+    *pResult = CDRF_DODEFAULT;
+
+    if (pDraw->nmcd.dwDrawStage == CDDS_PREPAINT) {
+        *pResult = CDRF_NOTIFYITEMDRAW;
+        return;
+    }
+
+    if (pDraw->nmcd.dwDrawStage == CDDS_ITEMPREPAINT) {
+        const int index = static_cast<int>(pDraw->nmcd.dwItemSpec);
+        pDraw->clrTextBk = m_transcripts[index].type == TranscriptType::User ? kUserBubble : kCardBg;
+        pDraw->clrText = kTextPrimary;
+        *pResult = CDRF_DODEFAULT;
+    }
+}
+
+void CMainFrame::OnCustomDrawLogs(NMHDR* pNMHDR, LRESULT* pResult)
+{
+    LPNMLVCUSTOMDRAW pDraw = reinterpret_cast<LPNMLVCUSTOMDRAW>(pNMHDR);
+    *pResult = CDRF_DODEFAULT;
+
+    if (pDraw->nmcd.dwDrawStage == CDDS_PREPAINT) {
+        *pResult = CDRF_NOTIFYITEMDRAW;
+        return;
+    }
+
+    if (pDraw->nmcd.dwDrawStage == CDDS_ITEMPREPAINT) {
+        pDraw->clrTextBk = kCardBg;
+        pDraw->clrText = kTextSecondary;
+        *pResult = CDRF_DODEFAULT;
+    }
 }
