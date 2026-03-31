@@ -24,8 +24,10 @@ function Install-AgoraSDK {
     Write-Host "Downloading $SdkName..." -ForegroundColor Cyan
     Write-Host "  URL: $DownloadUrl" -ForegroundColor Gray
     
-    $zipPath = Join-Path $PSScriptRoot "$($SdkName)_temp.zip"
-    $extractPath = Join-Path $PSScriptRoot "$($SdkName)_temp"
+    # Use system temp directory to avoid long path issues under deep project roots
+    $tempBasePath   = [System.IO.Path]::GetTempPath()
+    $zipPath        = Join-Path $tempBasePath "$($SdkName)_temp.zip"
+    $extractPath    = Join-Path $tempBasePath "$($SdkName)_temp"
     
     try {
         # Download
@@ -35,39 +37,54 @@ function Install-AgoraSDK {
         $ProgressPreference = 'Continue'
         
         $fileSize = (Get-Item $zipPath).Length / 1MB
-        Write-Host "  Downloaded $([math]::Round($fileSize, 2)) MB" -ForegroundColor Green
+        Write-Host "  Downloaded $([math]::Round($fileSize, 2)) MB (saved to $zipPath)" -ForegroundColor Green
         
-        # Extract
-        Write-Host "  [2/3] Extracting..." -ForegroundColor Yellow
+        # Extract (to temp to minimize path length; suppress non-fatal entry errors)
+        Write-Host "  [2/3] Extracting to temp..." -ForegroundColor Yellow
         if (Test-Path $extractPath) {
             Remove-Item -Recurse -Force $extractPath
         }
-        Expand-Archive -Path $zipPath -DestinationPath $extractPath -Force
-        Write-Host "  Extracted successfully" -ForegroundColor Green
+        Expand-Archive -Path $zipPath -DestinationPath $extractPath -Force -ErrorAction SilentlyContinue
+        Write-Host "  Extracted (best-effort) to $extractPath" -ForegroundColor Green
         
-        # Move to target directory
+        # Organize into target directory
         Write-Host "  [3/3] Organizing files..." -ForegroundColor Yellow
-        $extractedFolders = Get-ChildItem -Path $extractPath -Directory
         
-        if ($extractedFolders.Count -eq 1) {
-            $sdkSourceDir = Join-Path $extractedFolders[0].FullName "sdk"
-            if (Test-Path $sdkSourceDir) {
-                # Clean target directory if exists
-                if (Test-Path $TargetDir) {
-                    Remove-Item -Recurse -Force $TargetDir
-                }
-                Move-Item -Path $sdkSourceDir -Destination $TargetDir
-                Write-Host "  $SdkName installed to: $TargetDir" -ForegroundColor Green
-            } else {
-                # Alternative: extracted folder is the SDK
-                if (Test-Path $TargetDir) {
-                    Remove-Item -Recurse -Force $TargetDir
-                }
-                Move-Item -Path $extractedFolders[0].FullName -Destination $TargetDir
-                Write-Host "  $SdkName installed to: $TargetDir" -ForegroundColor Green
-            }
-        } else {
-            throw "Unexpected archive structure: found $($extractedFolders.Count) folders"
+        # Find a folder that looks like the SDK root (contains high_level_api or x86_64)
+        $candidateRoots = Get-ChildItem -Path $extractPath -Recurse -Directory |
+            Where-Object {
+                (Test-Path (Join-Path $_.FullName "high_level_api")) -or
+                (Test-Path (Join-Path $_.FullName "x86_64"))
+            } |
+            Select-Object -First 1
+        
+        if (-not $candidateRoots) {
+            throw "Could not locate SDK root (no folder with high_level_api/ or x86_64/ found under $extractPath)"
+        }
+        
+        $sdkRoot = $candidateRoots.FullName
+        Write-Host "  Detected SDK root: $sdkRoot" -ForegroundColor Gray
+        
+        # Clean target directory if exists
+        if (Test-Path $TargetDir) {
+            Remove-Item -Recurse -Force $TargetDir
+        }
+        New-Item -ItemType Directory -Path $TargetDir -Force | Out-Null
+        
+        # Move high_level_api (headers)
+        $highLevelSrc = Join-Path $sdkRoot "high_level_api"
+        if (Test-Path $highLevelSrc) {
+            $highLevelDst = Join-Path $TargetDir "high_level_api"
+            Move-Item -Path $highLevelSrc -Destination $highLevelDst
+            Write-Host "  Moved high_level_api -> $highLevelDst" -ForegroundColor Green
+        }
+        
+        # Move x86_64 (libs + DLLs)
+        $libSrc = Join-Path $sdkRoot "x86_64"
+        if (Test-Path $libSrc) {
+            $libDst = Join-Path $TargetDir "x86_64"
+            Move-Item -Path $libSrc -Destination $libDst
+            Write-Host "  Moved x86_64 -> $libDst" -ForegroundColor Green
         }
         
         # Cleanup
