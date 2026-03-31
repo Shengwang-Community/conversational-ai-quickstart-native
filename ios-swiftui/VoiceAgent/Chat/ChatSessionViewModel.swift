@@ -262,10 +262,10 @@ class ChatSessionViewModel: NSObject, ObservableObject {
                     "api_key": KeyCenter.LLM_API_KEY,
                     "vendor": "aliyun",
                     "system_messages": [
-                        ["role": "system", "content": "你是一名有帮助的 AI 助手。"]
+                        ["role": "system", "content": "You are a helpful AI assistant."]
                     ],
-                    "greeting_message": "你好！我是你的 AI 助手，有什么可以帮你？",
-                    "failure_message": "抱歉，我暂时处理不了你的请求，请稍后再试。",
+                    "greeting_message": "Hello! I am your AI assistant. How can I help you today?",
+                    "failure_message": "Sorry, I am not able to process your request right now. Please try again later.",
                     "params": [
                         "model": KeyCenter.LLM_MODEL
                     ]
