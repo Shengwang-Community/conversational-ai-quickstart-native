@@ -147,7 +147,6 @@ class _AgentChatPageState extends State<AgentChatPage> {
     await engine.enableAudio();
     await engine.setAudioScenario(AudioScenarioType.audioScenarioAiClient);
     await engine.setDefaultAudioRouteToSpeakerphone(true);
-    await engine.setEnableSpeakerphone(true);
     await _applyRtcAudioRouteParameters(AudioRoute.routeSpeakerphone.value());
   }
 
