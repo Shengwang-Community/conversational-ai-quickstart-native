@@ -547,11 +547,15 @@ void CMainFrame::StartSession()
     m_transcripts.clear();
     m_rtcJoined = false;
     m_rtmLoggedIn = false;
+    m_isActive = false;
+    m_agentId.clear();
+    m_agentToken.clear();
+    m_authToken.clear();
     m_listMessages.DeleteAllItems();
     UpdateAgentStatus(_T("Generating token..."), StatusTone::Warning);
     
     std::vector<AgoraTokenType> types = { AgoraTokenType::RTC, AgoraTokenType::RTM };
-    TokenGenerator::GenerateToken("", std::to_string(m_userUid), 86400, types,
+    TokenGenerator::GenerateToken(m_channelName, std::to_string(m_userUid), 86400, types,
         [this](bool ok, const std::string& token, const std::string&) {
             if (!GetSafeHwnd()) return;
             if (!ok) {
@@ -561,8 +565,8 @@ void CMainFrame::StartSession()
             }
             LogToView(_T("Token OK"));
             m_userToken = token;
+            m_authToken = token;
             UpdateAgentStatus(_T("Joining channel..."), StatusTone::Info);
-            JoinRTCChannel(token);
             LoginRTM(token);
         });
 }
@@ -618,7 +622,7 @@ void CMainFrame::JoinRTCChannel(const std::string& token)
     opt.publishMicrophoneTrack = true;
     opt.publishCameraTrack = false;
     opt.autoSubscribeAudio = true;
-    opt.autoSubscribeVideo = false;
+    opt.autoSubscribeVideo = true;
     
     int ret = m_rtcEngine->joinChannel(token.c_str(), m_channelName.c_str(), m_userUid, opt);
     
@@ -640,10 +644,31 @@ void CMainFrame::LoginRTM(const std::string& token)
     m_rtmClient->login(token.c_str(), reqId);
 }
 
-void CMainFrame::StartAgent()
+void CMainFrame::SubscribeConvoAIMessage()
 {
-    UpdateAgentStatus(_T("Starting agent..."), StatusTone::Warning);
-    
+    if (!m_rtmClient) {
+        LogToView(_T("ConvoAI subscribe FAIL: RTM nil"));
+        PostMessage(WM_AGENT_START_FAILED, 0, 0);
+        return;
+    }
+
+    UpdateAgentStatus(_T("Subscribing to ConvoAI..."), StatusTone::Info);
+    LogToView(_T("ConvoAI subscribe..."));
+
+    agora::rtm::SubscribeOptions opt;
+    opt.withMessage = true;
+    opt.withPresence = true;
+    opt.withMetadata = false;
+    opt.withLock = false;
+
+    uint64_t reqId = 0;
+    m_rtmClient->subscribe(m_channelName.c_str(), opt, reqId);
+}
+
+void CMainFrame::GenerateAgentTokenAndStart()
+{
+    UpdateAgentStatus(_T("Requesting agent token..."), StatusTone::Warning);
+
     std::vector<AgoraTokenType> types = { AgoraTokenType::RTC, AgoraTokenType::RTM };
     TokenGenerator::GenerateToken(m_channelName, std::to_string(m_agentUid), 86400, types,
         [this](bool ok, const std::string& token, const std::string&) {
@@ -653,35 +678,29 @@ void CMainFrame::StartAgent()
                 PostMessage(WM_AGENT_START_FAILED, 0, 0);
                 return;
             }
+
             LogToView(_T("Agent token OK"));
             m_agentToken = token;
+            StartAgent();
+        });
+}
 
-            TokenGenerator::GenerateToken(m_channelName, std::to_string(m_agentUid), 86400, types,
-                [this, token](bool authOk, const std::string& authToken, const std::string&) {
-                    if (!GetSafeHwnd()) return;
-                    if (!authOk) {
-                        LogToView(_T("Auth token FAIL"));
-                        PostMessage(WM_AGENT_START_FAILED, 0, 0);
-                        return;
-                    }
+void CMainFrame::StartAgent()
+{
+    UpdateAgentStatus(_T("Starting agent..."), StatusTone::Warning);
 
-                    LogToView(_T("Auth token OK"));
-                    m_authToken = authToken;
-
-                    AgentManager::StartAgent(m_channelName, std::to_string(m_agentUid), token, authToken,
-                        [this](bool ok, const std::string& result) {
-                            if (!GetSafeHwnd()) return;
-                            if (!ok) {
-                                LogToView(StringUtils::Utf8ToCString("Agent start FAIL: " + result));
-                                PostMessage(WM_AGENT_START_FAILED, 0, 0);
-                                return;
-                            }
-                            LogToView(_T("Agent start OK"));
-                            m_agentId = result;
-                            m_isActive = true;
-                            PostMessage(WM_AGENT_STARTED, 0, 0);
-                        });
-                });
+    AgentManager::StartAgent(m_channelName, std::to_string(m_agentUid), m_agentToken, m_userToken,
+        [this](bool ok, const std::string& result) {
+            if (!GetSafeHwnd()) return;
+            if (!ok) {
+                LogToView(StringUtils::Utf8ToCString("Agent start FAIL: " + result));
+                PostMessage(WM_AGENT_START_FAILED, 0, 0);
+                return;
+            }
+            LogToView(_T("Agent start OK"));
+            m_agentId = result;
+            m_isActive = true;
+            PostMessage(WM_AGENT_STARTED, 0, 0);
         });
 }
 
@@ -698,17 +717,6 @@ unsigned int CMainFrame::GenerateRandomUid()
     return dist(gen);
 }
 
-void CMainFrame::CheckJoinAndLoginComplete()
-{
-    if (!m_rtcJoined || !m_rtmLoggedIn) {
-        return;
-    }
-
-    UpdateAgentStatus(_T("Starting agent..."), StatusTone::Warning);
-    InitializeConvoAI();
-    StartAgent();
-}
-
 // =============================================================================
 // RTC Callbacks
 // =============================================================================
@@ -719,7 +727,6 @@ void CMainFrame::onJoinChannelSuccess(const char*, agora::rtc::uid_t uid, int)
     CString msg;
     msg.Format(_T("onJoinSuccess uid=%u"), uid);
     LogToView(msg);
-    CheckJoinAndLoginComplete();
 }
 
 void CMainFrame::onLeaveChannel(const agora::rtc::RtcStats&)
@@ -771,7 +778,6 @@ void CMainFrame::OnRtmLoginResult(int errorCode)
     if (errorCode == 0) {
         m_rtmLoggedIn = true;
         LogToView(_T("RTM login OK"));
-        CheckJoinAndLoginComplete();
         PostMessage(WM_RTM_LOGIN_SUCCESS, 0, 0);
     } else {
         LogToView(_T("RTM login FAIL"));
@@ -833,6 +839,12 @@ void CMainFrame::RtmEventHandler::onSubscribeResult(const uint64_t, const char* 
     CString msg;
     msg.Format(_T("RTM subscribe channel=%S result=%d"), channelName ? channelName : "", static_cast<int>(errorCode));
     m_frame->LogToView(msg);
+
+    if (errorCode == agora::rtm::RTM_ERROR_OK) {
+        m_frame->GenerateAgentTokenAndStart();
+    } else {
+        m_frame->PostMessage(WM_AGENT_START_FAILED, 0, 0);
+    }
 }
 
 // =============================================================================
@@ -897,16 +909,9 @@ LRESULT CMainFrame::OnTokenFailed(WPARAM, LPARAM)
 
 LRESULT CMainFrame::OnRTMLoginSuccess(WPARAM, LPARAM)
 {
-    if (m_rtmClient) {
-        agora::rtm::SubscribeOptions opt;
-        opt.withMessage = true;
-        opt.withPresence = true;
-        opt.withMetadata = false;
-        opt.withLock = false;
-        
-        uint64_t reqId = 0;
-        m_rtmClient->subscribe(m_channelName.c_str(), opt, reqId);
-    }
+    InitializeConvoAI();
+    JoinRTCChannel(m_userToken);
+    SubscribeConvoAIMessage();
     return 0;
 }
 

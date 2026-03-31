@@ -127,8 +127,9 @@ private:
     void StopSession();
     void JoinRTCChannel(const std::string& token);
     void LoginRTM(const std::string& token);
+    void SubscribeConvoAIMessage();
+    void GenerateAgentTokenAndStart();
     void StartAgent();
-    void CheckJoinAndLoginComplete();
     std::string GenerateRandomChannelName();
     static unsigned int GenerateRandomUid();
     
