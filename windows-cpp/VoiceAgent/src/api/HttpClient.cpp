@@ -62,6 +62,8 @@ struct HttpClient::Impl {
                 std::string headerLine = header.first + ": " + header.second;
                 headerList = curl_slist_append(headerList, headerLine.c_str());
             }
+            // Match URLSession behavior more closely and avoid servers stalling on 100-continue.
+            headerList = curl_slist_append(headerList, "Expect:");
             if (headerList) {
                 curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headerList);
             }
@@ -80,6 +82,7 @@ struct HttpClient::Impl {
             // Set timeout
             curl_easy_setopt(curl, CURLOPT_TIMEOUT, timeout);
             curl_easy_setopt(curl, CURLOPT_CONNECTTIMEOUT, 10L);
+            curl_easy_setopt(curl, CURLOPT_NOSIGNAL, 1L);
             
             // SSL settings
             curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, verifySSL ? 1L : 0L);
@@ -91,7 +94,7 @@ struct HttpClient::Impl {
             #endif
             
             // Perform request
-            LOG_INFO("[HttpClient] POST " + url);
+            LOG_INFO("[HttpClient] POST " + url + " (body_bytes=" + std::to_string(body.size()) + ")");
             CURLcode res = curl_easy_perform(curl);
             
             // Cleanup headers
@@ -111,6 +114,9 @@ struct HttpClient::Impl {
             // Get HTTP status code
             long statusCode = 0;
             curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &statusCode);
+
+            double totalTime = 0.0;
+            curl_easy_getinfo(curl, CURLINFO_TOTAL_TIME, &totalTime);
             
             // Get effective URL (after redirects)
             char* effectiveUrl = nullptr;
@@ -119,7 +125,8 @@ struct HttpClient::Impl {
                 LOG_INFO("[HttpClient] Redirected to: " + std::string(effectiveUrl));
             }
             
-            LOG_INFO("[HttpClient] Response status: " + std::to_string(statusCode));
+            LOG_INFO("[HttpClient] Response status: " + std::to_string(statusCode) +
+                ", elapsed_ms=" + std::to_string(static_cast<int>(totalTime * 1000)));
             
             if (statusCode == 200) {
                 callback(true, responseBody, (int)statusCode);
@@ -176,4 +183,3 @@ void HttpClient::SetTimeout(int seconds) {
 void HttpClient::SetVerifySSL(bool verify) {
     m_impl->verifySSL = verify;
 }
-
