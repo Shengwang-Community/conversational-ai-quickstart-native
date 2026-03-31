@@ -56,6 +56,7 @@ struct HttpClient::Impl {
             curl_easy_setopt(curl, CURLOPT_POST, 1L);
             curl_easy_setopt(curl, CURLOPT_POSTFIELDS, body.c_str());
             curl_easy_setopt(curl, CURLOPT_POSTFIELDSIZE, body.size());
+            curl_easy_setopt(curl, CURLOPT_HTTP_VERSION, CURL_HTTP_VERSION_1_1);
             
             // Add headers
             for (const auto& header : headers) {
@@ -81,7 +82,10 @@ struct HttpClient::Impl {
             
             // Set timeout
             curl_easy_setopt(curl, CURLOPT_TIMEOUT, timeout);
+            curl_easy_setopt(curl, CURLOPT_TIMEOUT_MS, static_cast<long>(timeout) * 1000L);
             curl_easy_setopt(curl, CURLOPT_CONNECTTIMEOUT, 10L);
+            curl_easy_setopt(curl, CURLOPT_LOW_SPEED_LIMIT, 1L);
+            curl_easy_setopt(curl, CURLOPT_LOW_SPEED_TIME, timeout);
             curl_easy_setopt(curl, CURLOPT_NOSIGNAL, 1L);
             
             // SSL settings

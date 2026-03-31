@@ -6,11 +6,18 @@
 
 #include <nlohmann/json.hpp>
 #include <sstream>
+#include <chrono>
 
 using json = nlohmann::json;
 
 namespace {
 constexpr const char* API_BASE_URL = "https://api.agora.io/cn/api/conversational-ai-agent/v2/projects";
+
+std::string BuildAgentName(const std::string& channelName, const std::string& agentRtcUid) {
+    const auto now = std::chrono::system_clock::now().time_since_epoch();
+    const auto seconds = std::chrono::duration_cast<std::chrono::seconds>(now).count();
+    return "agent_" + channelName + "_" + agentRtcUid + "_" + std::to_string(seconds);
+}
 }
 
 std::string AgentManager::GenerateAuthorization(const std::string& authToken) {
@@ -32,7 +39,7 @@ void AgentManager::StartAgent(
     LOG_INFO("[AgentManager] Request URL: " + urlString);
 
     json payload = {
-        {"name", channelName},
+        {"name", BuildAgentName(channelName, agentRtcUid)},
         {"properties", {
             {"channel", channelName},
             {"agent_rtc_uid", agentRtcUid},
