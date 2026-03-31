@@ -1,4 +1,4 @@
-﻿// MainFrm.cpp
+// MainFrm.cpp
 
 #include "../general/pch.h"
 #include "../general/framework.h"
@@ -671,7 +671,7 @@ void CMainFrame::GenerateAgentTokenAndStart()
 
     std::vector<AgoraTokenType> types = { AgoraTokenType::RTC, AgoraTokenType::RTM };
     TokenGenerator::GenerateToken(m_channelName, std::to_string(m_agentUid), 86400, types,
-        [this](bool ok, const std::string& token, const std::string&) {
+        [this, types](bool ok, const std::string& token, const std::string&) {
             if (!GetSafeHwnd()) return;
             if (!ok) {
                 LogToView(_T("Agent token FAIL"));

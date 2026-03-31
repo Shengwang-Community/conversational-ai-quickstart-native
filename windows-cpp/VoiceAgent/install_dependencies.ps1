@@ -173,16 +173,52 @@ if ($needDownloadRtm) {
     }
 }
 
+# ========================================
+# Install vcpkg dependencies (curl, nlohmann-json)
+# ========================================
+
+Write-Host ""
+Write-Host "--- Installing vcpkg dependencies ---" -ForegroundColor Yellow
+
+$vcpkgDir  = Join-Path $PSScriptRoot "vcpkg"
+$vcpkgExe  = Join-Path $vcpkgDir "vcpkg.exe"
+
+if (-not (Test-Path $vcpkgExe)) {
+    Write-Host "vcpkg not found under $vcpkgDir. Cloning and bootstrapping..." -ForegroundColor Cyan
+    try {
+        git --version | Out-Null
+    }
+    catch {
+        Write-Host "Error: git is required to clone vcpkg. Please install git and re-run this script." -ForegroundColor Red
+        exit 1
+    }
+
+    git clone https://github.com/microsoft/vcpkg.git $vcpkgDir
+    & "$vcpkgDir\bootstrap-vcpkg.bat"
+}
+else {
+    Write-Host "vcpkg already exists. Skipping clone/bootstrap." -ForegroundColor Green
+}
+
+if (Test-Path $vcpkgExe) {
+    Write-Host "Running vcpkg install (triplet: x64-windows) using vcpkg.json manifest..." -ForegroundColor Cyan
+    & $vcpkgExe install --triplet x64-windows
+} else {
+    Write-Host "Error: vcpkg.exe not found after bootstrap. Please check vcpkg installation." -ForegroundColor Red
+    exit 1
+}
+
 # Summary
 Write-Host ""
-Write-Host "=== SDK Installation Complete ===" -ForegroundColor Green
+Write-Host "=== Dependency Installation Complete ===" -ForegroundColor Green
 Write-Host ""
-Write-Host "Installed SDKs:" -ForegroundColor Yellow
-Write-Host "  [✓] RTC SDK → rtcLib/" -ForegroundColor Green
-Write-Host "  [✓] RTM SDK → rtmLib/" -ForegroundColor Green
+Write-Host "Installed components:" -ForegroundColor Yellow
+Write-Host "  [OK] RTC SDK -> rtcLib/" -ForegroundColor Green
+Write-Host "  [OK] RTM SDK -> rtmLib/" -ForegroundColor Green
+Write-Host "  [OK] vcpkg dependencies (curl, nlohmann-json)" -ForegroundColor Green
 Write-Host ""
 Write-Host "Next Steps:" -ForegroundColor Cyan
 Write-Host "  1. Open project/VoiceAgent.vcxproj in Visual Studio" -ForegroundColor White
-Write-Host "  2. Build the project (vcpkg will auto-install dependencies)" -ForegroundColor White
+Write-Host "  2. Build the project (all dependencies are now installed)" -ForegroundColor White
 Write-Host "  3. Run the application" -ForegroundColor White
 Write-Host ""
