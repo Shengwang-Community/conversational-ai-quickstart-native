@@ -2,6 +2,7 @@
 //
 
 #include "../general/pch.h"
+#include <array>
 #include <memory>
 #include <thread>
 #include <sstream>
@@ -49,8 +50,15 @@ struct HttpClient::Impl {
         struct curl_slist* headerList = nullptr;
         
         try {
+            std::array<char, CURL_ERROR_SIZE> errorBuffer{};
+            curl_easy_setopt(curl, CURLOPT_ERRORBUFFER, errorBuffer.data());
+
             // Set URL
             curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
+            // On this Windows environment, api.agora.io may resolve to an IPv6 path that
+            // stalls instead of failing fast. Prefer IPv4 while keeping the rest of the
+            // transport behavior unchanged.
+            curl_easy_setopt(curl, CURLOPT_IPRESOLVE, CURL_IPRESOLVE_V4);
             
             // Set POST method
             curl_easy_setopt(curl, CURLOPT_POST, 1L);
@@ -91,6 +99,12 @@ struct HttpClient::Impl {
             // SSL settings
             curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, verifySSL ? 1L : 0L);
             curl_easy_setopt(curl, CURLOPT_SSL_VERIFYHOST, verifySSL ? 2L : 0L);
+            curl_easy_setopt(curl, CURLOPT_SSLVERSION, CURL_SSLVERSION_TLSv1_2);
+#ifdef CURLSSLOPT_REVOKE_BEST_EFFORT
+            curl_easy_setopt(curl, CURLOPT_SSL_OPTIONS, CURLSSLOPT_REVOKE_BEST_EFFORT);
+#elif defined(CURLSSLOPT_NO_REVOKE)
+            curl_easy_setopt(curl, CURLOPT_SSL_OPTIONS, CURLSSLOPT_NO_REVOKE);
+#endif
             
             // Enable verbose logging in debug mode
             #ifdef _DEBUG
@@ -110,6 +124,9 @@ struct HttpClient::Impl {
             // Check result
             if (res != CURLE_OK) {
                 std::string error = curl_easy_strerror(res);
+                if (errorBuffer[0] != '\0') {
+                    error += " | detail: " + std::string(errorBuffer.data());
+                }
                 LOG_ERROR("[HttpClient] Request failed: " + error);
                 callback(false, error, 0);
                 return;
@@ -132,7 +149,7 @@ struct HttpClient::Impl {
             LOG_INFO("[HttpClient] Response status: " + std::to_string(statusCode) +
                 ", elapsed_ms=" + std::to_string(static_cast<int>(totalTime * 1000)));
             
-            if (statusCode == 200) {
+            if (statusCode >= 200 && statusCode < 300) {
                 callback(true, responseBody, (int)statusCode);
             } else {
                 LOG_ERROR("[HttpClient] HTTP error: " + std::to_string(statusCode));

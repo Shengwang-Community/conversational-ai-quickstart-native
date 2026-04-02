@@ -6,10 +6,12 @@
 #include "MainFrm.h"
 #include "../../resources/Resource.h"
 #include "../KeyCenter.h"
+#include "../tools/AgentManager.h"
 #include "../tools/Logger.h"
+#include "../tools/NetworkManager.h"
 #include "../tools/StringUtils.h"
-#include "../api/TokenGenerator.h"
-#include "../api/AgentManager.h"
+
+#include <algorithm>
 #include <ctime>
 #include <random>
 
@@ -17,29 +19,23 @@
 #define new DEBUG_NEW
 #endif
 
-#define WM_TOKEN_FAILED       (WM_USER + 1)
-#define WM_RTM_LOGIN_SUCCESS  (WM_USER + 2)
-#define WM_RTM_LOGIN_FAILED   (WM_USER + 3)
-#define WM_AGENT_STARTED      (WM_USER + 4)
-#define WM_AGENT_START_FAILED (WM_USER + 5)
-#define WM_AGENT_JOINED       (WM_USER + 6)
-#define WM_AGENT_LEFT         (WM_USER + 7)
-#define WM_TRANSCRIPT_UPDATE  (WM_USER + 8)
-#define WM_AGENT_STATE_UPDATE (WM_USER + 9)
+#define WM_EXECUTE_UI_TASK  (WM_USER + 1)
 
-#define IDC_BTN_START     2001
-#define IDC_BTN_STOP      2002
-#define IDC_BTN_MUTE      2003
-#define IDC_LIST_MESSAGES 2004
-#define IDC_LIST_LOG      2005
+#define IDC_BTN_START       2001
+#define IDC_BTN_STOP        2002
+#define IDC_BTN_MUTE        2003
+#define IDC_LIST_MESSAGES   2004
+#define IDC_LIST_LOG        2005
 
 namespace {
 constexpr COLORREF kWindowBg = RGB(15, 23, 42);
 constexpr COLORREF kCardBg = RGB(30, 41, 59);
 constexpr COLORREF kCardBorder = RGB(51, 65, 85);
+constexpr COLORREF kLogSurface = RGB(9, 15, 28);
 constexpr COLORREF kTextPrimary = RGB(241, 245, 249);
 constexpr COLORREF kTextSecondary = RGB(148, 163, 184);
-constexpr COLORREF kUserBubble = RGB(37, 99, 235);
+constexpr COLORREF kUserRow = RGB(30, 64, 175);
+constexpr COLORREF kAgentRow = RGB(30, 41, 59);
 constexpr COLORREF kStatusNeutral = RGB(71, 85, 105);
 constexpr COLORREF kStatusSuccess = RGB(16, 185, 129);
 constexpr COLORREF kStatusWarning = RGB(245, 158, 11);
@@ -55,44 +51,35 @@ BEGIN_MESSAGE_MAP(CMainFrame, CFrameWnd)
     ON_WM_PAINT()
     ON_WM_ERASEBKGND()
     ON_WM_CTLCOLOR()
+    ON_WM_DRAWITEM()
+    ON_WM_MEASUREITEM()
     ON_BN_CLICKED(IDC_BTN_START, &CMainFrame::OnStartClicked)
     ON_BN_CLICKED(IDC_BTN_STOP, &CMainFrame::OnStopClicked)
     ON_BN_CLICKED(IDC_BTN_MUTE, &CMainFrame::OnMuteClicked)
-    ON_NOTIFY(NM_CUSTOMDRAW, IDC_LIST_MESSAGES, &CMainFrame::OnCustomDrawMessages)
-    ON_NOTIFY(NM_CUSTOMDRAW, IDC_LIST_LOG, &CMainFrame::OnCustomDrawLogs)
-    ON_MESSAGE(WM_TOKEN_FAILED, &CMainFrame::OnTokenFailed)
-    ON_MESSAGE(WM_RTM_LOGIN_SUCCESS, &CMainFrame::OnRTMLoginSuccess)
-    ON_MESSAGE(WM_RTM_LOGIN_FAILED, &CMainFrame::OnRTMLoginFailed)
-    ON_MESSAGE(WM_AGENT_STARTED, &CMainFrame::OnAgentStarted)
-    ON_MESSAGE(WM_AGENT_START_FAILED, &CMainFrame::OnAgentStartFailed)
-    ON_MESSAGE(WM_AGENT_JOINED, &CMainFrame::OnAgentJoined)
-    ON_MESSAGE(WM_AGENT_LEFT, &CMainFrame::OnAgentLeft)
-    ON_MESSAGE(WM_TRANSCRIPT_UPDATE, &CMainFrame::OnTranscriptUpdate)
-    ON_MESSAGE(WM_AGENT_STATE_UPDATE, &CMainFrame::OnAgentStateUpdate)
+    ON_MESSAGE(WM_EXECUTE_UI_TASK, &CMainFrame::OnExecuteUITask)
 END_MESSAGE_MAP()
 
-// =============================================================================
-// Lifecycle
-// =============================================================================
-
 CMainFrame::CMainFrame() noexcept
-    : m_rtcEngine(nullptr)
-    , m_rtmClient(nullptr)
-    , m_isActive(false)
-    , m_isMuted(false)
-    , m_rtcJoined(false)
-    , m_rtmLoggedIn(false)
-    , m_userUid(GenerateRandomUid())
-    , m_agentUid(GenerateRandomUid())
-    , m_brushWindow(kWindowBg)
-    , m_brushCard(kCardBg)
-    , m_brushStatus(kStatusNeutral)
-    , m_statusTextColor(kTextSecondary)
+    : m_statusTextColor(kTextSecondary)
     , m_statusTone(StatusTone::Hidden)
     , m_statusText(_T(""))
+    , m_isChatSessionVisible(false)
+    , m_debugLogHorizontalExtent(0)
+    , m_isSessionActive(false)
+    , m_isMicMuted(false)
+    , m_sessionGeneration(0)
+    , m_userUid(generateRandomUserUid())
+    , m_agentUid(generateRandomAgentUid())
+    , m_currentAgentState(AgentState::Unknown)
+    , m_rtcEngine(nullptr)
+    , m_rtmClient(nullptr)
+    , m_brushWindow(kWindowBg)
+    , m_brushCard(kCardBg)
+    , m_brushLogSurface(kLogSurface)
+    , m_brushStatus(kStatusNeutral)
 {
     while (m_agentUid == m_userUid) {
-        m_agentUid = GenerateRandomUid();
+        m_agentUid = generateRandomAgentUid();
     }
 }
 
@@ -102,17 +89,14 @@ CMainFrame::~CMainFrame()
         m_convoAIAPI->RemoveHandler(this);
         m_convoAIAPI.reset();
     }
-    
+
     if (m_rtmClient) {
-        if (m_rtmLoggedIn) {
-            uint64_t reqId = 0;
-            m_rtmClient->logout(reqId);
-        }
+        uint64_t requestId = 0;
+        m_rtmClient->logout(requestId);
         m_rtmClient->release();
         m_rtmClient = nullptr;
     }
-    m_rtmHandler.reset();
-    
+
     if (m_rtcEngine) {
         m_rtcEngine->leaveChannel();
         m_rtcEngine->release();
@@ -122,8 +106,9 @@ CMainFrame::~CMainFrame()
 
 BOOL CMainFrame::PreCreateWindow(CREATESTRUCT& cs)
 {
-    if (!CFrameWnd::PreCreateWindow(cs))
+    if (!CFrameWnd::PreCreateWindow(cs)) {
         return FALSE;
+    }
 
     cs.dwExStyle &= ~WS_EX_CLIENTEDGE;
     cs.lpszClass = AfxRegisterWndClass(0);
@@ -132,22 +117,21 @@ BOOL CMainFrame::PreCreateWindow(CREATESTRUCT& cs)
     cs.cy = 800;
     cs.x = (GetSystemMetrics(SM_CXSCREEN) - cs.cx) / 2;
     cs.y = (GetSystemMetrics(SM_CYSCREEN) - cs.cy) / 2;
-
     return TRUE;
 }
 
 int CMainFrame::OnCreate(LPCREATESTRUCT lpCreateStruct)
 {
-    if (CFrameWnd::OnCreate(lpCreateStruct) == -1)
+    if (CFrameWnd::OnCreate(lpCreateStruct) == -1) {
         return -1;
+    }
 
     m_normalFont.CreatePointFont(90, _T("Segoe UI"));
     m_smallFont.CreatePointFont(80, _T("Consolas"));
-    m_titleFont.CreatePointFont(180, _T("Segoe UI Semibold"));
-    m_subtitleFont.CreatePointFont(90, _T("Segoe UI"));
-    
-    SetupUI();
-    SetupSDK();
+
+    setupUI();
+    setupSDK();
+    switchToConnectionStartView();
 
     return 0;
 }
@@ -157,145 +141,48 @@ void CMainFrame::AssertValid() const { CFrameWnd::AssertValid(); }
 void CMainFrame::Dump(CDumpContext& dc) const { CFrameWnd::Dump(dc); }
 #endif
 
-// =============================================================================
-// UI Setup
-// =============================================================================
-
-void CMainFrame::SetupUI()
+void CMainFrame::setupUI()
 {
-    SetupLogPanel();
-    SetupTopPanel();
-    SetupBottomPanel();
-    LayoutPanels();
+    setupDebugInfoPanel();
+    setupChatViews();
+    layoutViews();
 }
 
-void CMainFrame::SetupTopPanel()
+void CMainFrame::setupDebugInfoPanel()
 {
-    m_topPanel.Create(_T(""), WS_CHILD | WS_VISIBLE, CRect(0, 0, 10, 10), this);
-
-    m_headerTitle.Create(_T("Voice Agent"), WS_CHILD | WS_VISIBLE | SS_LEFT,
-        CRect(0, 0, 10, 10), this);
-    m_headerTitle.SetFont(&m_titleFont);
-
-    m_headerSubtitle.Create(_T("Real-time conversation with your AI assistant"), WS_CHILD | WS_VISIBLE | SS_LEFT,
-        CRect(0, 0, 10, 10), this);
-    m_headerSubtitle.SetFont(&m_subtitleFont);
-    
-    m_listMessages.Create(WS_CHILD | WS_VISIBLE | WS_BORDER | LVS_REPORT | LVS_NOCOLUMNHEADER,
-        CRect(0, 0, 10, 10), this, IDC_LIST_MESSAGES);
-    m_listMessages.SetFont(&m_normalFont);
-    m_listMessages.SetExtendedStyle(LVS_EX_FULLROWSELECT | LVS_EX_DOUBLEBUFFER);
-    m_listMessages.InsertColumn(0, _T("Messages"), LVCFMT_LEFT, 500);
-    ApplyListTheme(m_listMessages, 500);
-    
-    m_labelAgentStatus.Create(_T(""), WS_CHILD | WS_VISIBLE | SS_CENTER,
-        CRect(0, 0, 10, 10), this);
-    m_labelAgentStatus.SetFont(&m_normalFont);
-}
-
-void CMainFrame::SetupLogPanel()
-{
-    m_logPanel.Create(_T(""), WS_CHILD | WS_VISIBLE | SS_ETCHEDFRAME, CRect(0, 0, 10, 10), this);
-
-    m_logTitle.Create(_T("Debug Log"), WS_CHILD | WS_VISIBLE | SS_LEFT,
-        CRect(0, 0, 10, 10), this);
-    m_logTitle.SetFont(&m_subtitleFont);
-    
-    m_listLog.Create(WS_CHILD | WS_VISIBLE | WS_BORDER | LVS_REPORT | LVS_NOCOLUMNHEADER,
+    m_debugInfoList.Create(WS_CHILD | WS_VISIBLE | WS_VSCROLL | WS_HSCROLL | LBS_NOINTEGRALHEIGHT | LBS_DISABLENOSCROLL,
         CRect(0, 0, 10, 10), this, IDC_LIST_LOG);
-    m_listLog.SetFont(&m_smallFont);
-    m_listLog.SetExtendedStyle(LVS_EX_FULLROWSELECT | LVS_EX_DOUBLEBUFFER);
-    m_listLog.InsertColumn(0, _T("Log"), LVCFMT_LEFT, LOG_PANEL_WIDTH - 20);
-    ApplyListTheme(m_listLog, LOG_PANEL_WIDTH - 20);
+    m_debugInfoList.SetFont(&m_smallFont);
+    appendDebugMessage(_T("Waiting for connection..."));
 }
 
-void CMainFrame::SetupBottomPanel()
+void CMainFrame::setupChatViews()
 {
-    m_bottomPanel.Create(_T(""), WS_CHILD | WS_VISIBLE, CRect(0, 0, 10, 10), this);
-    
-    m_btnStart.Create(_T("Start Agent"), WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON,
-        CRect(0, 0, 10, 10), this, IDC_BTN_START);
-    m_btnStart.SetFont(&m_normalFont);
-    
-    m_btnMute.Create(_T("Mute"), WS_CHILD | BS_PUSHBUTTON,
-        CRect(0, 0, 10, 10), this, IDC_BTN_MUTE);
-    m_btnMute.SetFont(&m_normalFont);
-    
-    m_btnStop.Create(_T("Stop Agent"), WS_CHILD | BS_PUSHBUTTON,
-        CRect(0, 0, 10, 10), this, IDC_BTN_STOP);
-    m_btnStop.SetFont(&m_normalFont);
+    m_connectionStartView.Create(this, IDC_BTN_START, &m_normalFont);
+    m_chatSessionView.Create(this, IDC_LIST_MESSAGES, IDC_BTN_MUTE, IDC_BTN_STOP, &m_normalFont, &m_normalFont);
 }
 
-void CMainFrame::LayoutPanels()
+void CMainFrame::layoutViews()
 {
     CRect rc;
     GetClientRect(&rc);
-    if (rc.Width() <= 0 || rc.Height() <= 0) return;
-    
-    CRect logCard = GetLogCardRect();
-    CRect controlBar = GetControlBarRect();
-    CRect statusRect = GetStatusRect();
-    CRect messagesCard = GetMessagesCardRect();
+    if (rc.Width() <= 0 || rc.Height() <= 0) {
+        return;
+    }
 
-    const int contentWidth = logCard.left - PADDING;
-    const int titleTop = PADDING + 8;
-    const int titleHeight = 34;
-    const int subtitleTop = titleTop + titleHeight + 4;
-    const int subtitleHeight = 20;
-    const int listInset = 14;
-    const int logHeaderHeight = 22;
-    const int buttonY = controlBar.top + (controlBar.Height() - BUTTON_HEIGHT) / 2;
-    const int stopWidth = 120;
-    const int muteWidth = 96;
-    const int startX = controlBar.left + 12;
-    const int startWidth = controlBar.Width() - 24;
-    const int stopX = controlBar.right - 12 - stopWidth;
-    const int muteX = stopX - 12 - muteWidth;
+    const CRect messagesCard = getMessagesCardRect();
+    const CRect statusRect = getStatusRect();
+    const CRect controlBarRect = getControlBarRect();
+    const CRect logListRect = getLogListRect();
 
-    m_topPanel.MoveWindow(0, 0, contentWidth, controlBar.top);
-    m_headerTitle.MoveWindow(PADDING, titleTop, contentWidth - PADDING * 2, titleHeight);
-    m_headerSubtitle.MoveWindow(PADDING, subtitleTop, contentWidth - PADDING * 2, subtitleHeight);
-
-    m_listMessages.MoveWindow(messagesCard.left + listInset, messagesCard.top + listInset,
-        messagesCard.Width() - listInset * 2, messagesCard.Height() - listInset * 2);
-    m_listMessages.SetColumnWidth(0, messagesCard.Width() - listInset * 2 - 8);
-
-    m_labelAgentStatus.MoveWindow(statusRect.left, statusRect.top, statusRect.Width(), statusRect.Height());
-
-    m_bottomPanel.MoveWindow(controlBar.left, controlBar.top, controlBar.Width(), controlBar.Height());
-    m_btnStart.MoveWindow(startX, buttonY, startWidth, BUTTON_HEIGHT);
-    m_btnMute.MoveWindow(muteX, buttonY, muteWidth, BUTTON_HEIGHT);
-    m_btnStop.MoveWindow(stopX, buttonY, stopWidth, BUTTON_HEIGHT);
-
-    m_logPanel.MoveWindow(logCard.left, logCard.top, logCard.Width(), logCard.Height());
-    m_logTitle.MoveWindow(logCard.left + 14, logCard.top + 12, logCard.Width() - 28, logHeaderHeight);
-    m_listLog.MoveWindow(logCard.left + 14, logCard.top + 40, logCard.Width() - 28, logCard.Height() - 54);
-    m_listLog.SetColumnWidth(0, logCard.Width() - 36);
+    m_connectionStartView.Layout(controlBarRect);
+    m_chatSessionView.Layout(messagesCard, statusRect, controlBarRect);
+    m_debugInfoList.MoveWindow(logListRect);
 
     Invalidate(FALSE);
 }
 
-void CMainFrame::OnSize(UINT nType, int cx, int cy)
-{
-    CFrameWnd::OnSize(nType, cx, cy);
-    if (cx > 0 && cy > 0 && ::IsWindow(m_listMessages.GetSafeHwnd())) {
-        LayoutPanels();
-    }
-}
-
-// =============================================================================
-// UI Helpers
-// =============================================================================
-
-void CMainFrame::ApplyListTheme(CListCtrl& list, int width)
-{
-    list.SetBkColor(kCardBg);
-    list.SetTextBkColor(kCardBg);
-    list.SetTextColor(kTextPrimary);
-    list.SetColumnWidth(0, width);
-}
-
-CRect CMainFrame::GetMessagesCardRect() const
+CRect CMainFrame::getMessagesCardRect() const
 {
     CRect rc;
     const_cast<CMainFrame*>(this)->GetClientRect(&rc);
@@ -303,22 +190,20 @@ CRect CMainFrame::GetMessagesCardRect() const
     const int contentWidth = logLeft - PADDING;
     const int controlTop = rc.bottom - BOTTOM_PANEL_HEIGHT - PADDING;
     const int statusHeight = 40;
-    const int headerBottom = PADDING + 72;
-
-    return CRect(PADDING, headerBottom, contentWidth - PADDING, controlTop - statusHeight - 16);
+    return CRect(PADDING, PADDING, contentWidth - PADDING, controlTop - statusHeight - 8);
 }
 
-CRect CMainFrame::GetStatusRect() const
+CRect CMainFrame::getStatusRect() const
 {
     CRect rc;
     const_cast<CMainFrame*>(this)->GetClientRect(&rc);
     const int logLeft = rc.right - LOG_PANEL_WIDTH;
     const int contentWidth = logLeft - PADDING;
     const int controlTop = rc.bottom - BOTTOM_PANEL_HEIGHT - PADDING;
-    return CRect(PADDING, controlTop - 48, contentWidth - PADDING, controlTop - 8);
+    return CRect(PADDING, controlTop - 42, contentWidth - PADDING, controlTop - 6);
 }
 
-CRect CMainFrame::GetControlBarRect() const
+CRect CMainFrame::getControlBarRect() const
 {
     CRect rc;
     const_cast<CMainFrame*>(this)->GetClientRect(&rc);
@@ -327,32 +212,34 @@ CRect CMainFrame::GetControlBarRect() const
     return CRect(PADDING, rc.bottom - BOTTOM_PANEL_HEIGHT - PADDING, contentWidth - PADDING, rc.bottom - PADDING);
 }
 
-CRect CMainFrame::GetLogCardRect() const
+CRect CMainFrame::getLogCardRect() const
 {
     CRect rc;
     const_cast<CMainFrame*>(this)->GetClientRect(&rc);
     return CRect(rc.right - LOG_PANEL_WIDTH, PADDING, rc.right - PADDING, rc.bottom - PADDING);
 }
 
-void CMainFrame::DrawRoundedCard(CDC& dc, const CRect& rect, COLORREF fillColor, COLORREF borderColor, int radius) const
+CRect CMainFrame::getLogListRect() const
+{
+    const CRect logCard = getLogCardRect();
+    return CRect(logCard.left + 6, logCard.top + 6, logCard.right - 6, logCard.bottom - 6);
+}
+
+void CMainFrame::drawRoundedCard(CDC& dc, const CRect& rect, COLORREF fillColor, COLORREF borderColor, int) const
 {
     CPen pen(PS_SOLID, 1, borderColor);
     CBrush brush(fillColor);
     CPen* oldPen = dc.SelectObject(&pen);
     CBrush* oldBrush = dc.SelectObject(&brush);
-    dc.RoundRect(rect, CPoint(radius, radius));
+    dc.Rectangle(rect);
     dc.SelectObject(oldBrush);
     dc.SelectObject(oldPen);
 }
 
-void CMainFrame::RefreshStatusBrush()
+void CMainFrame::refreshStatusBrush()
 {
     COLORREF color = kStatusNeutral;
     switch (m_statusTone) {
-    case StatusTone::Hidden:
-    case StatusTone::Neutral:
-        color = kStatusNeutral;
-        break;
     case StatusTone::Success:
         color = kStatusSuccess;
         break;
@@ -365,6 +252,11 @@ void CMainFrame::RefreshStatusBrush()
     case StatusTone::Error:
         color = kStatusError;
         break;
+    case StatusTone::Hidden:
+    case StatusTone::Neutral:
+    default:
+        color = kStatusNeutral;
+        break;
     }
 
     m_brushStatus.DeleteObject();
@@ -372,633 +264,774 @@ void CMainFrame::RefreshStatusBrush()
     m_statusTextColor = kTextPrimary;
 }
 
-void CMainFrame::UpdateAgentStatus(const CString& status, StatusTone tone)
+void CMainFrame::switchToConnectionStartView()
+{
+    m_isChatSessionVisible = false;
+    m_connectionStartView.Show(TRUE);
+    m_connectionStartView.SetStartButtonEnabled(TRUE);
+    m_chatSessionView.Show(FALSE);
+    m_chatSessionView.GetAgentStateView().Show(FALSE);
+    Invalidate(FALSE);
+}
+
+void CMainFrame::switchToChatSessionView()
+{
+    m_isChatSessionVisible = true;
+    m_connectionStartView.Show(FALSE);
+    m_chatSessionView.Show(TRUE);
+    m_chatSessionView.UpdateMicButtonState(m_isMicMuted);
+    m_chatSessionView.GetAgentStateView().Show(m_statusTone != StatusTone::Hidden ? TRUE : FALSE);
+    Invalidate(FALSE);
+}
+
+void CMainFrame::updateAgentStatus(const CString& status, StatusTone tone)
 {
     m_statusText = status;
     m_statusTone = tone;
-    RefreshStatusBrush();
-    m_labelAgentStatus.SetWindowText(status);
-    m_labelAgentStatus.ShowWindow(tone == StatusTone::Hidden ? SW_HIDE : SW_SHOW);
-    if (GetSafeHwnd()) {
-        InvalidateRect(GetStatusRect(), FALSE);
+    refreshStatusBrush();
+    m_chatSessionView.GetAgentStateView().SetText(status);
+    if (m_isChatSessionVisible) {
+        m_chatSessionView.GetAgentStateView().Show(tone == StatusTone::Hidden ? FALSE : TRUE);
     }
+    InvalidateRect(getStatusRect(), FALSE);
 }
 
-void CMainFrame::ShowIdleButtons()
+void CMainFrame::updateTranscripts()
 {
-    m_btnMute.ShowWindow(SW_HIDE);
-    m_btnStop.ShowWindow(SW_HIDE);
-    m_btnStart.ShowWindow(SW_SHOW);
-    m_btnStart.EnableWindow(TRUE);
-}
+    auto& transcriptList = m_chatSessionView.GetTranscriptList();
+    transcriptList.ResetContent();
 
-void CMainFrame::ShowActiveButtons()
-{
-    m_btnStart.ShowWindow(SW_HIDE);
-    m_btnMute.ShowWindow(SW_SHOW);
-    m_btnMute.EnableWindow(TRUE);
-    m_btnStop.ShowWindow(SW_SHOW);
-    m_btnStop.EnableWindow(TRUE);
-}
-
-void CMainFrame::UpdateTranscripts()
-{
-    m_listMessages.DeleteAllItems();
-    for (size_t i = 0; i < m_transcripts.size(); ++i) {
-        const Transcript& t = m_transcripts[i];
-        CString role = (t.type == TranscriptType::Agent) ? _T("Agent") : _T("User");
-        CString content = StringUtils::Utf8ToCString(t.text);
-        CString row;
-        row.Format(_T("%s  •  %s"), role, content);
-        if (t.status != TranscriptStatus::End) {
-            row += _T(" ...");
+    for (size_t index = 0; index < m_transcripts.size(); ++index) {
+        const Transcript& transcript = m_transcripts[index];
+        CString content = StringUtils::Utf8ToCString(transcript.text);
+        if (transcript.status != TranscriptStatus::End) {
+            content += _T(" ...");
         }
-        m_listMessages.InsertItem((int)i, row);
+        CString row = buildTranscriptHeader(transcript);
+        row += _T("\n");
+        row += content;
+        transcriptList.AddString(row);
     }
+
     if (!m_transcripts.empty()) {
-        m_listMessages.EnsureVisible((int)m_transcripts.size() - 1, FALSE);
+        transcriptList.SetTopIndex(std::max(0, transcriptList.GetCount() - 1));
     }
 }
 
-void CMainFrame::LogToView(const CString& message)
+CString CMainFrame::buildTranscriptHeader(const Transcript& transcript) const
+{
+    const CString role = transcript.type == TranscriptType::User ? _T("User") : _T("Agent");
+    CString header;
+    header.Format(_T("%s | Turn %d | ID %S"),
+        role.GetString(),
+        transcript.turnId,
+        transcript.userId.c_str());
+    return header;
+}
+
+int CMainFrame::measureTranscriptItemHeight(CDC& dc, const Transcript& transcript, int availableWidth) const
+{
+    const int contentWidth = std::max(80, availableWidth - 32);
+    CRect calcRect(0, 0, contentWidth, 0);
+
+    CString message = StringUtils::Utf8ToCString(transcript.text);
+    if (transcript.status != TranscriptStatus::End) {
+        message += _T(" ...");
+    }
+
+    CFont* oldFont = dc.SelectObject(const_cast<CFont*>(&m_smallFont));
+    const CString header = buildTranscriptHeader(transcript);
+    dc.DrawText(header, &calcRect, DT_CALCRECT | DT_SINGLELINE | DT_NOPREFIX);
+    const int headerHeight = calcRect.Height();
+
+    calcRect = CRect(0, 0, contentWidth, 0);
+    dc.SelectObject(const_cast<CFont*>(&m_normalFont));
+    dc.DrawText(message, &calcRect, DT_CALCRECT | DT_WORDBREAK | DT_NOPREFIX);
+    const int messageHeight = calcRect.Height();
+    dc.SelectObject(oldFont);
+
+    return std::max(56, headerHeight + messageHeight + 32);
+}
+
+void CMainFrame::appendDebugMessage(const CString& message)
 {
     time_t now = time(nullptr);
-    struct tm t;
-    localtime_s(&t, &now);
-    
+    struct tm timeInfo;
+    localtime_s(&timeInfo, &now);
+
     CString line;
-    line.Format(_T("[%02d:%02d:%02d] %s"), t.tm_hour, t.tm_min, t.tm_sec, message);
-    
-    int idx = m_listLog.GetItemCount();
-    m_listLog.InsertItem(idx, line);
-    m_listLog.EnsureVisible(idx, FALSE);
-    
+    line.Format(_T("[%02d:%02d:%02d] %s"), timeInfo.tm_hour, timeInfo.tm_min, timeInfo.tm_sec, message);
+
+    constexpr int kMaxDebugItems = 500;
+    if (m_debugInfoList.GetCount() >= kMaxDebugItems) {
+        m_debugInfoList.DeleteString(0);
+    }
+
+    m_debugInfoList.AddString(line);
+
+    CClientDC dc(&m_debugInfoList);
+    CFont* oldFont = dc.SelectObject(&m_smallFont);
+    const int lineWidth = static_cast<int>(dc.GetTextExtent(line).cx) + 24;
+    m_debugLogHorizontalExtent = std::max(m_debugLogHorizontalExtent, lineWidth);
+    dc.SelectObject(oldFont);
+    m_debugInfoList.SetHorizontalExtent(m_debugLogHorizontalExtent);
+
+    const int itemCount = m_debugInfoList.GetCount();
+    if (itemCount > 0) {
+        CRect listRect;
+        m_debugInfoList.GetClientRect(&listRect);
+        const int itemHeight = std::max(1, static_cast<int>(m_debugInfoList.GetItemHeight(0)));
+        const int visibleItems = std::max(1, listRect.Height() / itemHeight);
+        m_debugInfoList.SetTopIndex(std::max(0, itemCount - visibleItems));
+    }
+
     LOG_INFO(std::string(CT2A(message)));
 }
 
-// =============================================================================
-// SDK Setup
-// =============================================================================
-
-void CMainFrame::SetupSDK()
+void CMainFrame::postUITask(UITask task)
 {
-    m_listLog.DeleteAllItems();
-    InitializeRTC();
-    InitializeRTM();
-    UpdateAgentStatus(_T("Ready to start"), StatusTone::Hidden);
+    auto* taskPtr = new UITask(std::move(task));
+    if (!GetSafeHwnd() || !::IsWindow(GetSafeHwnd()) || !PostMessage(WM_EXECUTE_UI_TASK, 0, reinterpret_cast<LPARAM>(taskPtr))) {
+        delete taskPtr;
+    }
 }
 
-void CMainFrame::InitializeRTC()
+void CMainFrame::handleStartFailure(const CString& status)
+{
+    appendDebugMessage(status);
+    updateAgentStatus(status, StatusTone::Error);
+    stopSession();
+}
+
+void CMainFrame::setupSDK()
+{
+    initializeRTC();
+    initializeRTM();
+    updateAgentStatus(_T("Ready to start"), StatusTone::Hidden);
+}
+
+void CMainFrame::initializeRTC()
 {
     m_rtcEngine = createAgoraRtcEngine();
     if (!m_rtcEngine) {
-        LogToView(_T("RTC init FAIL"));
+        appendDebugMessage(_T("RTC init FAIL"));
         return;
     }
-    
-    agora::rtc::RtcEngineContext ctx;
-    ctx.appId = KeyCenter::AGORA_APP_ID;
-    ctx.eventHandler = this;
-    ctx.audioScenario = agora::rtc::AUDIO_SCENARIO_DEFAULT;
-    
-    if (m_rtcEngine->initialize(ctx) != 0) {
-        LogToView(_T("RTC init FAIL"));
+
+    agora::rtc::RtcEngineContext context{};
+    context.appId = KeyCenter::AGORA_APP_ID;
+    context.eventHandler = this;
+    context.audioScenario = agora::rtc::AUDIO_SCENARIO_AI_CLIENT;
+
+    if (m_rtcEngine->initialize(context) != 0) {
+        appendDebugMessage(_T("RTC init FAIL"));
         m_rtcEngine->release();
         m_rtcEngine = nullptr;
         return;
     }
-    
+
     m_rtcEngine->setChannelProfile(agora::CHANNEL_PROFILE_LIVE_BROADCASTING);
     m_rtcEngine->setClientRole(agora::rtc::CLIENT_ROLE_BROADCASTER);
     m_rtcEngine->enableAudio();
     m_rtcEngine->disableVideo();
     m_rtcEngine->enableLocalAudio(true);
-    
-    CString msg;
-    msg.Format(_T("RTC init OK, v%S"), m_rtcEngine->getVersion(nullptr));
-    LogToView(msg);
+    m_rtcEngine->enableAudioVolumeIndication(100, 3, false);
+    m_rtcEngine->setParameters("{\"che.audio.enable.predump\":{\"enable\":\"true\",\"duration\":\"60\"}}");
+
+    CString message;
+    message.Format(_T("RTC init OK, v%S"), m_rtcEngine->getVersion(nullptr));
+    appendDebugMessage(message);
 }
 
-void CMainFrame::InitializeRTM()
+void CMainFrame::initializeRTM()
 {
     m_rtmHandler = std::make_unique<RtmEventHandler>(this);
-    std::string userIdStr = std::to_string(m_userUid);
-    
-    agora::rtm::RtmConfig cfg;
-    cfg.appId = KeyCenter::AGORA_APP_ID;
-    cfg.userId = userIdStr.c_str();
-    cfg.eventHandler = m_rtmHandler.get();
-    cfg.presenceTimeout = 30;
-    cfg.useStringUserId = true;
-    cfg.areaCode = agora::rtm::RTM_AREA_CODE_GLOB;
-    
-    int err = 0;
-    m_rtmClient = createAgoraRtmClient(cfg, err);
-    
-    if (m_rtmClient && err == 0) {
-        LogToView(_T("RTM init OK"));
+
+    agora::rtm::RtmConfig config{};
+    const std::string userId = std::to_string(m_userUid);
+    config.appId = KeyCenter::AGORA_APP_ID;
+    config.userId = userId.c_str();
+    config.eventHandler = m_rtmHandler.get();
+    config.presenceTimeout = 30;
+    config.useStringUserId = true;
+    config.areaCode = agora::rtm::RTM_AREA_CODE_GLOB;
+
+    int errorCode = 0;
+    m_rtmClient = createAgoraRtmClient(config, errorCode);
+
+    if (m_rtmClient && errorCode == 0) {
+        appendDebugMessage(_T("RTM init OK"));
     } else {
-        CString msg;
-        msg.Format(_T("RTM init FAIL, code=%d"), err);
-        LogToView(msg);
+        CString message;
+        message.Format(_T("RTM init FAIL, code=%d"), errorCode);
+        appendDebugMessage(message);
     }
 }
 
-void CMainFrame::InitializeConvoAI()
+void CMainFrame::initializeConvoAIAPI()
 {
     if (!m_convoAIAPI) {
-        m_convoAIAPI = std::make_unique<ConversationalAIAPI>();
+        m_convoAIAPI = std::make_unique<ConversationalAIAPI>(ConversationalAIAPIConfig(m_rtcEngine, m_rtmClient, true));
         m_convoAIAPI->AddHandler(this);
     }
 }
 
-// =============================================================================
-// Button Actions
-// =============================================================================
-
-void CMainFrame::OnStartClicked()
+void CMainFrame::startSession()
 {
-    m_btnStart.EnableWindow(FALSE);
-    StartSession();
-}
+    resetSessionState();
+    m_channelName = generateRandomChannelName();
+    const auto sessionGeneration = ++m_sessionGeneration;
+    updateAgentStatus(_T("Generating user token..."), StatusTone::Warning);
+    m_connectionStartView.SetStartButtonEnabled(FALSE);
 
-void CMainFrame::OnStopClicked()
-{
-    m_btnStop.EnableWindow(FALSE);
-    StopSession();
-}
+    generateUserToken(sessionGeneration, [this, sessionGeneration](bool didGenerateUserToken) {
+        if (sessionGeneration != m_sessionGeneration) {
+            return;
+        }
+        if (!didGenerateUserToken) {
+            handleStartFailure(_T("User token failed"));
+            return;
+        }
 
-void CMainFrame::OnMuteClicked()
-{
-    m_isMuted = !m_isMuted;
-    m_btnMute.SetWindowText(m_isMuted ? _T("Unmute") : _T("Mute"));
-    if (m_rtcEngine) {
-        m_rtcEngine->adjustRecordingSignalVolume(m_isMuted ? 0 : 100);
-    }
-}
-
-// =============================================================================
-// Session Management
-// =============================================================================
-
-void CMainFrame::StartSession()
-{
-    m_channelName = GenerateRandomChannelName();
-    m_transcripts.clear();
-    m_rtcJoined = false;
-    m_rtmLoggedIn = false;
-    m_isActive = false;
-    m_agentId.clear();
-    m_agentToken.clear();
-    m_authToken.clear();
-    m_listMessages.DeleteAllItems();
-    UpdateAgentStatus(_T("Generating token..."), StatusTone::Warning);
-    
-    std::vector<AgoraTokenType> types = { AgoraTokenType::RTC, AgoraTokenType::RTM };
-    TokenGenerator::GenerateToken(m_channelName, std::to_string(m_userUid), 86400, types,
-        [this](bool ok, const std::string& token, const std::string&) {
-            if (!GetSafeHwnd()) return;
-            if (!ok) {
-                LogToView(_T("Token FAIL"));
-                PostMessage(WM_TOKEN_FAILED, 0, 0);
+        updateAgentStatus(_T("Logging in RTM..."), StatusTone::Info);
+        loginRTM(sessionGeneration, [this, sessionGeneration](bool didLoginRTM) {
+            if (sessionGeneration != m_sessionGeneration) {
                 return;
             }
-            LogToView(_T("Token OK"));
-            m_userToken = token;
-            m_authToken = token;
-            UpdateAgentStatus(_T("Joining channel..."), StatusTone::Info);
-            LoginRTM(token);
+            if (!didLoginRTM) {
+                handleStartFailure(_T("RTM login failed"));
+                return;
+            }
+
+            initializeConvoAIAPI();
+            updateAgentStatus(_T("Joining RTC channel..."), StatusTone::Info);
+            joinRTCChannel();
+            updateAgentStatus(_T("Subscribing to ConvoAI..."), StatusTone::Info);
+
+            subscribeConvoAIMessage([this, sessionGeneration](bool didSubscribeToConvoAI) {
+                if (sessionGeneration != m_sessionGeneration) {
+                    return;
+                }
+                if (!didSubscribeToConvoAI) {
+                    handleStartFailure(_T("ConvoAI subscribe failed"));
+                    return;
+                }
+
+                updateAgentStatus(_T("Generating agent token..."), StatusTone::Warning);
+                generateAgentToken(sessionGeneration, [this, sessionGeneration](bool didGenerateAgentToken) {
+                    if (sessionGeneration != m_sessionGeneration) {
+                        return;
+                    }
+                    if (!didGenerateAgentToken) {
+                        handleStartFailure(_T("Agent token failed"));
+                        return;
+                    }
+
+                    updateAgentStatus(_T("Starting agent..."), StatusTone::Warning);
+                    startAgent(sessionGeneration, [this, sessionGeneration](bool didStartAgent) {
+                        if (sessionGeneration != m_sessionGeneration) {
+                            return;
+                        }
+                        if (!didStartAgent) {
+                            handleStartFailure(_T("Agent start failed"));
+                            return;
+                        }
+
+                        switchToChatSessionView();
+                        updateAgentStatus(_T("Launching..."), StatusTone::Info);
+                    });
+                });
+            });
         });
+    });
 }
 
-void CMainFrame::StopSession()
+void CMainFrame::stopSession()
 {
-    UpdateAgentStatus(_T("Stopping agent..."), StatusTone::Warning);
-    
+    ++m_sessionGeneration;
+
+    if (!m_agentId.empty() && !m_userToken.empty()) {
+        AgentManager::stopAgent(m_agentId, m_userToken, nullptr);
+    }
+
     if (m_convoAIAPI) {
+        if (!m_channelName.empty()) {
+            m_convoAIAPI->UnsubscribeMessage(m_channelName, nullptr);
+        }
         m_convoAIAPI->RemoveHandler(this);
+        m_convoAIAPI->Destroy();
         m_convoAIAPI.reset();
     }
-    
-    if (!m_agentId.empty() && !m_authToken.empty()) {
-        AgentManager::StopAgent(m_agentId, m_authToken, [](bool, const std::string&) {});
+
+    if (m_rtmClient) {
+        uint64_t requestId = 0;
+        m_rtmClient->logout(requestId);
     }
-    
-    if (m_rtmLoggedIn && m_rtmClient) {
-        uint64_t reqId = 0;
-        m_rtmClient->logout(reqId);
-        m_rtmLoggedIn = false;
-    }
-    
+
     if (m_rtcEngine) {
         m_rtcEngine->leaveChannel();
     }
-    
+
+    resetSessionState();
+    switchToConnectionStartView();
+    updateAgentStatus(_T("Ready to start"), StatusTone::Hidden);
+}
+
+void CMainFrame::generateUserToken(unsigned long long sessionGeneration, const std::function<void(bool)>& completion)
+{
+    NetworkManager::shared().generateToken(m_channelName, std::to_string(m_userUid), 86400,
+        {AgoraTokenType::RTC, AgoraTokenType::RTM},
+        [this, sessionGeneration, completion](bool success, const std::string& token, const std::string& errorMessage) {
+            postUITask([this, sessionGeneration, completion, success, token, errorMessage]() {
+                if (sessionGeneration != m_sessionGeneration) {
+                    return;
+                }
+                if (!success) {
+                    appendDebugMessage(StringUtils::Utf8ToCString("User token failed: " + errorMessage));
+                    completion(false);
+                    return;
+                }
+
+                m_userToken = token;
+                appendDebugMessage(_T("User token succeeded"));
+                completion(true);
+            });
+        });
+}
+
+void CMainFrame::loginRTM(unsigned long long sessionGeneration, const std::function<void(bool)>& completion)
+{
+    if (!m_rtmClient) {
+        completion(false);
+        return;
+    }
+
+    m_onRTMLoginCompletion = [this, sessionGeneration, completion](bool didLoginRTM) {
+        if (sessionGeneration != m_sessionGeneration) {
+            return;
+        }
+        completion(didLoginRTM);
+    };
+    uint64_t requestId = 0;
+    m_rtmClient->login(m_userToken.c_str(), requestId);
+}
+
+void CMainFrame::joinRTCChannel()
+{
+    if (!m_rtcEngine) {
+        appendDebugMessage(_T("joinChannel FAIL"));
+        return;
+    }
+
+    if (m_convoAIAPI) {
+        m_convoAIAPI->LoadAudioSettings();
+    }
+
+    agora::rtc::ChannelMediaOptions options{};
+    options.clientRoleType = agora::rtc::CLIENT_ROLE_BROADCASTER;
+    options.publishMicrophoneTrack = true;
+    options.publishCameraTrack = false;
+    options.autoSubscribeAudio = true;
+    options.autoSubscribeVideo = true;
+
+    const int result = m_rtcEngine->joinChannel(m_userToken.c_str(), m_channelName.c_str(), m_userUid, options);
+    CString message;
+    message.Format(_T("joinChannel ret=%d"), result);
+    appendDebugMessage(message);
+}
+
+void CMainFrame::subscribeConvoAIMessage(const std::function<void(bool)>& completion)
+{
+    if (!m_convoAIAPI) {
+        completion(false);
+        return;
+    }
+
+    m_convoAIAPI->SubscribeMessage(m_channelName, [this, completion](const ConversationalAIAPIError* error) {
+        postUITask([this, completion, hasError = error != nullptr, errorMessage = error ? error->message : std::string()]() {
+            if (hasError) {
+                appendDebugMessage(StringUtils::Utf8ToCString("ConvoAI subscribe failed: " + errorMessage));
+                completion(false);
+                return;
+            }
+
+            appendDebugMessage(_T("ConvoAI subscribed"));
+            completion(true);
+        });
+    });
+}
+
+void CMainFrame::generateAgentToken(unsigned long long sessionGeneration, const std::function<void(bool)>& completion)
+{
+    NetworkManager::shared().generateToken(m_channelName, std::to_string(m_agentUid), 86400,
+        {AgoraTokenType::RTC, AgoraTokenType::RTM},
+        [this, sessionGeneration, completion](bool success, const std::string& token, const std::string& errorMessage) {
+            postUITask([this, sessionGeneration, completion, success, token, errorMessage]() {
+                if (sessionGeneration != m_sessionGeneration) {
+                    return;
+                }
+                if (!success) {
+                    appendDebugMessage(StringUtils::Utf8ToCString("Agent token failed: " + errorMessage));
+                    completion(false);
+                    return;
+                }
+
+                m_agentToken = token;
+                appendDebugMessage(_T("Agent token succeeded"));
+                completion(true);
+            });
+        });
+}
+
+void CMainFrame::startAgent(unsigned long long sessionGeneration, const std::function<void(bool)>& completion)
+{
+    AgentManager::startAgent(m_channelName, std::to_string(m_agentUid), m_agentToken, m_userToken,
+        [this, sessionGeneration, completion](bool success, const std::string& agentIdOrError) {
+            postUITask([this, sessionGeneration, completion, success, agentIdOrError]() {
+                if (sessionGeneration != m_sessionGeneration) {
+                    return;
+                }
+                if (!success) {
+                    appendDebugMessage(StringUtils::Utf8ToCString("Agent start failed: " + agentIdOrError));
+                    completion(false);
+                    return;
+                }
+
+                m_agentId = agentIdOrError;
+                m_isSessionActive = true;
+                appendDebugMessage(_T("Agent start succeeded"));
+                completion(true);
+            });
+        });
+}
+
+void CMainFrame::resetSessionState()
+{
     m_channelName.clear();
     m_userToken.clear();
     m_agentToken.clear();
-    m_authToken.clear();
     m_agentId.clear();
-    m_isActive = false;
-    m_isMuted = false;
-    m_rtcJoined = false;
+    m_isSessionActive = false;
+    m_isMicMuted = false;
+    m_currentAgentState = AgentState::Unknown;
     m_transcripts.clear();
-    
-    m_listMessages.DeleteAllItems();
-    m_btnMute.SetWindowText(_T("Mute"));
-    ShowIdleButtons();
-    UpdateAgentStatus(_T("Ready to start"), StatusTone::Hidden);
+    m_connectionStartView.SetStartButtonEnabled(TRUE);
+    m_chatSessionView.UpdateMicButtonState(false);
+    m_chatSessionView.GetAgentStateView().SetText(_T(""));
+    m_chatSessionView.GetAgentStateView().Show(FALSE);
+    m_onRTMLoginCompletion = nullptr;
+    updateTranscripts();
 }
 
-void CMainFrame::JoinRTCChannel(const std::string& token)
+unsigned int CMainFrame::generateRandomUserUid()
 {
-    if (!m_rtcEngine) {
-        LogToView(_T("joinChannel FAIL"));
-        return;
-    }
-    
-    agora::rtc::ChannelMediaOptions opt;
-    opt.clientRoleType = agora::rtc::CLIENT_ROLE_BROADCASTER;
-    opt.publishMicrophoneTrack = true;
-    opt.publishCameraTrack = false;
-    opt.autoSubscribeAudio = true;
-    opt.autoSubscribeVideo = true;
-    
-    int ret = m_rtcEngine->joinChannel(token.c_str(), m_channelName.c_str(), m_userUid, opt);
-    
-    CString msg;
-    msg.Format(_T("joinChannel ret=%d"), ret);
-    LogToView(msg);
+    static std::random_device randomDevice;
+    static std::mt19937 generator(randomDevice());
+    static std::uniform_int_distribution<unsigned int> distribution(1000, 9999999);
+    return distribution(generator);
 }
 
-void CMainFrame::LoginRTM(const std::string& token)
+unsigned int CMainFrame::generateRandomAgentUid()
 {
-    if (!m_rtmClient) {
-        LogToView(_T("RTM login FAIL: nil"));
-        PostMessage(WM_RTM_LOGIN_FAILED, 0, 0);
-        return;
-    }
-    
-    LogToView(_T("RTM login..."));
-    uint64_t reqId = 0;
-    m_rtmClient->login(token.c_str(), reqId);
+    static std::random_device randomDevice;
+    static std::mt19937 generator(randomDevice());
+    static std::uniform_int_distribution<unsigned int> distribution(10000000, 99999999);
+    return distribution(generator);
 }
 
-void CMainFrame::SubscribeConvoAIMessage()
+std::string CMainFrame::generateRandomChannelName() const
 {
-    if (!m_rtmClient) {
-        LogToView(_T("ConvoAI subscribe FAIL: RTM nil"));
-        PostMessage(WM_AGENT_START_FAILED, 0, 0);
-        return;
-    }
-
-    UpdateAgentStatus(_T("Subscribing to ConvoAI..."), StatusTone::Info);
-    LogToView(_T("ConvoAI subscribe..."));
-
-    agora::rtm::SubscribeOptions opt;
-    opt.withMessage = true;
-    opt.withPresence = true;
-    opt.withMetadata = false;
-    opt.withLock = false;
-
-    uint64_t reqId = 0;
-    m_rtmClient->subscribe(m_channelName.c_str(), opt, reqId);
+    return "channel_windows_" + std::to_string(generateRandomUserUid());
 }
-
-void CMainFrame::GenerateAgentTokenAndStart()
-{
-    UpdateAgentStatus(_T("Requesting agent token..."), StatusTone::Warning);
-
-    std::vector<AgoraTokenType> types = { AgoraTokenType::RTC, AgoraTokenType::RTM };
-    TokenGenerator::GenerateToken(m_channelName, std::to_string(m_agentUid), 86400, types,
-        [this, types](bool ok, const std::string& token, const std::string&) {
-            if (!GetSafeHwnd()) return;
-            if (!ok) {
-                LogToView(_T("Agent token FAIL"));
-                PostMessage(WM_AGENT_START_FAILED, 0, 0);
-                return;
-            }
-
-            LogToView(_T("Agent token OK"));
-            m_agentToken = token;
-            StartAgent();
-        });
-}
-
-void CMainFrame::StartAgent()
-{
-    UpdateAgentStatus(_T("Starting agent..."), StatusTone::Warning);
-
-    AgentManager::StartAgent(m_channelName, std::to_string(m_agentUid), m_agentToken, m_userToken,
-        [this](bool ok, const std::string& result) {
-            if (!GetSafeHwnd()) return;
-            if (!ok) {
-                LogToView(StringUtils::Utf8ToCString("Agent start FAIL: " + result));
-                PostMessage(WM_AGENT_START_FAILED, 0, 0);
-                return;
-            }
-            LogToView(_T("Agent start OK"));
-            m_agentId = result;
-            m_isActive = true;
-            PostMessage(WM_AGENT_STARTED, 0, 0);
-        });
-}
-
-std::string CMainFrame::GenerateRandomChannelName()
-{
-    return "channel_windows_" + std::to_string(GenerateRandomUid());
-}
-
-unsigned int CMainFrame::GenerateRandomUid()
-{
-    static std::random_device rd;
-    static std::mt19937 gen(rd());
-    static std::uniform_int_distribution<unsigned int> dist(100000, 999999);
-    return dist(gen);
-}
-
-// =============================================================================
-// RTC Callbacks
-// =============================================================================
 
 void CMainFrame::onJoinChannelSuccess(const char*, agora::rtc::uid_t uid, int)
 {
-    m_rtcJoined = true;
-    CString msg;
-    msg.Format(_T("onJoinSuccess uid=%u"), uid);
-    LogToView(msg);
+    postUITask([this, uid]() {
+        CString message;
+        message.Format(_T("RTC joined channel (uid=%u)"), uid);
+        appendDebugMessage(message);
+    });
 }
 
 void CMainFrame::onLeaveChannel(const agora::rtc::RtcStats&)
 {
-    LogToView(_T("onLeaveChannel"));
+    postUITask([this]() {
+        appendDebugMessage(_T("RTC left channel"));
+    });
 }
 
 void CMainFrame::onUserJoined(agora::rtc::uid_t uid, int)
 {
-    CString msg;
-    msg.Format(_T("onUserJoined uid=%u"), uid);
-    LogToView(msg);
-    
-    if (uid == m_agentUid && m_isActive) {
-        PostMessage(WM_AGENT_JOINED, 0, 0);
-    }
+    postUITask([this, uid]() {
+        CString message;
+        message.Format(_T("Remote user joined (uid=%u)"), uid);
+        appendDebugMessage(message);
+
+        if (uid == m_agentUid && m_isSessionActive) {
+            updateAgentStatus(_T("Connected"), StatusTone::Success);
+        }
+    });
 }
 
 void CMainFrame::onUserOffline(agora::rtc::uid_t uid, agora::rtc::USER_OFFLINE_REASON_TYPE)
 {
-    CString msg;
-    msg.Format(_T("onUserOffline uid=%u"), uid);
-    LogToView(msg);
-    
-    if (uid == m_agentUid && m_isActive) {
-        PostMessage(WM_AGENT_LEFT, 0, 0);
-    }
+    postUITask([this, uid]() {
+        CString message;
+        message.Format(_T("Remote user left (uid=%u)"), uid);
+        appendDebugMessage(message);
+
+        if (uid == m_agentUid && m_isSessionActive) {
+            updateAgentStatus(_T("Disconnected"), StatusTone::Error);
+        }
+    });
+}
+
+void CMainFrame::onAudioVolumeIndication(const agora::rtc::AudioVolumeInfo* speakers, unsigned int speakerNumber, int totalVolume)
+{
+    (void)speakers;
+    (void)speakerNumber;
+    (void)totalVolume;
+}
+
+void CMainFrame::onLocalAudioStateChanged(agora::rtc::LOCAL_AUDIO_STREAM_STATE state, agora::rtc::LOCAL_AUDIO_STREAM_REASON reason)
+{
+    postUITask([this, state, reason]() {
+        CString message;
+        message.Format(_T("Local audio state=%d reason=%d"), static_cast<int>(state), static_cast<int>(reason));
+        appendDebugMessage(message);
+    });
 }
 
 void CMainFrame::onTokenPrivilegeWillExpire(const char*)
 {
-    LogToView(_T("Token expiring"));
+    postUITask([this]() {
+        appendDebugMessage(_T("Token expiring"));
+    });
 }
 
-void CMainFrame::onError(int err, const char*)
+void CMainFrame::onError(int errorCode, const char*)
 {
-    CString msg;
-    msg.Format(_T("onError code=%d"), err);
-    LogToView(msg);
-    UpdateAgentStatus(msg, StatusTone::Error);
+    postUITask([this, errorCode]() {
+        CString message;
+        message.Format(_T("RTC error: %d"), errorCode);
+        appendDebugMessage(message);
+        updateAgentStatus(message, StatusTone::Error);
+    });
 }
 
-// =============================================================================
-// RTM Callbacks
-// =============================================================================
-
-void CMainFrame::OnRtmLoginResult(int errorCode)
+void CMainFrame::onRTMLoginResult(int errorCode)
 {
-    if (errorCode == 0) {
-        m_rtmLoggedIn = true;
-        LogToView(_T("RTM login OK"));
-        PostMessage(WM_RTM_LOGIN_SUCCESS, 0, 0);
-    } else {
-        LogToView(_T("RTM login FAIL"));
-        PostMessage(WM_RTM_LOGIN_FAILED, 0, 0);
-    }
+    postUITask([this, errorCode]() {
+        const bool isSuccess = errorCode == 0;
+        appendDebugMessage(isSuccess ? _T("RTM login succeeded") : _T("RTM login failed"));
+
+        if (m_onRTMLoginCompletion) {
+            auto completion = std::move(m_onRTMLoginCompletion);
+            completion(isSuccess);
+        }
+    });
 }
 
-void CMainFrame::OnRtmMessage(const char* message, const char* publisher)
+void CMainFrame::onRTMMessage(const char* message, const char* publisher)
 {
     if (m_convoAIAPI) {
         m_convoAIAPI->HandleMessage(message, publisher);
     }
 }
 
-void CMainFrame::RtmEventHandler::onLoginResult(const uint64_t, agora::rtm::RTM_ERROR_CODE err)
+void CMainFrame::OnTranscriptUpdated(const std::string&, const Transcript& transcript)
 {
-    m_frame->OnRtmLoginResult(err);
+    postUITask([this, transcript]() {
+        const auto existingTranscript = std::find_if(m_transcripts.begin(), m_transcripts.end(),
+            [&transcript](const Transcript& candidate) {
+                return candidate.turnId == transcript.turnId &&
+                       candidate.type == transcript.type &&
+                       candidate.userId == transcript.userId;
+            });
+
+        if (existingTranscript != m_transcripts.end()) {
+            *existingTranscript = transcript;
+        } else {
+            m_transcripts.push_back(transcript);
+        }
+
+        updateTranscripts();
+    });
 }
 
-void CMainFrame::RtmEventHandler::onMessageEvent(const MessageEvent& e)
+void CMainFrame::OnAgentStateChanged(const std::string&, const StateChangeEvent& event)
 {
-    if (e.message && e.messageLength > 0) {
-        std::string msg(e.message, e.messageLength);
-        std::string pub = e.publisher ? e.publisher : "";
-        m_frame->OnRtmMessage(msg.c_str(), pub.c_str());
+    postUITask([this, event]() {
+        m_currentAgentState = event.state;
+        static const TCHAR* states[] = { _T("Idle"), _T("Silent"), _T("Listening"), _T("Thinking"), _T("Speaking"), _T("Unknown") };
+        StatusTone tone = StatusTone::Neutral;
+        if (event.state == AgentState::Listening) {
+            tone = StatusTone::Success;
+        } else if (event.state == AgentState::Thinking) {
+            tone = StatusTone::Warning;
+        } else if (event.state == AgentState::Speaking) {
+            tone = StatusTone::Info;
+        }
+
+        const int stateIndex = static_cast<int>(event.state);
+        updateAgentStatus(states[stateIndex >= 0 && stateIndex < 6 ? stateIndex : 5], tone);
+    });
+}
+
+void CMainFrame::OnAgentError(const std::string&, const ModuleError& error)
+{
+    postUITask([this, error]() {
+        CString message;
+        message.Format(_T("Agent error: module=%S code=%d message=%S"),
+            error.module.c_str(), error.code, error.message.c_str());
+        appendDebugMessage(message);
+    });
+}
+
+void CMainFrame::OnMessageError(const std::string&, const MessageError& error)
+{
+    postUITask([this, error]() {
+        CString message;
+        message.Format(_T("Message error: module=%S code=%d message=%S"),
+            error.module.c_str(), error.code, error.message.c_str());
+        appendDebugMessage(message);
+    });
+}
+
+void CMainFrame::OnDebugLog(const std::string& log)
+{
+    postUITask([this, log]() {
+        appendDebugMessage(StringUtils::Utf8ToCString(log));
+    });
+}
+
+void CMainFrame::RtmEventHandler::onLoginResult(const uint64_t, agora::rtm::RTM_ERROR_CODE errorCode)
+{
+    m_frame->onRTMLoginResult(errorCode);
+}
+
+void CMainFrame::RtmEventHandler::onMessageEvent(const MessageEvent& event)
+{
+    if (event.message && event.messageLength > 0) {
+        std::string message(event.message, event.messageLength);
+        std::string publisher = event.publisher ? event.publisher : "";
+        m_frame->onRTMMessage(message.c_str(), publisher.c_str());
     }
 }
 
-void CMainFrame::RtmEventHandler::onPresenceEvent(const PresenceEvent& e)
+void CMainFrame::RtmEventHandler::onPresenceEvent(const PresenceEvent& event)
 {
-    if (e.stateItemCount == 0 || !e.stateItems) return;
-    
-    std::string state, turnId;
-    for (size_t i = 0; i < e.stateItemCount; ++i) {
-        std::string k = e.stateItems[i].key ? e.stateItems[i].key : "";
-        std::string v = e.stateItems[i].value ? e.stateItems[i].value : "";
-        if (k == "state") state = v;
-        else if (k == "turn_id") turnId = v;
+    if (event.stateItemCount == 0 || !event.stateItems) {
+        return;
     }
-    
+
+    std::string state;
+    std::string turnId;
+    for (size_t index = 0; index < event.stateItemCount; ++index) {
+        const std::string key = event.stateItems[index].key ? event.stateItems[index].key : "";
+        const std::string value = event.stateItems[index].value ? event.stateItems[index].value : "";
+        if (key == "state") {
+            state = value;
+        } else if (key == "turn_id") {
+            turnId = value;
+        }
+    }
+
     if (!state.empty()) {
-        std::string json = "{\"object\":\"message.state\",\"state\":\"" + state + 
+        std::string json = "{\"object\":\"message.state\",\"state\":\"" + state +
             "\",\"turn_id\":" + (turnId.empty() ? "0" : turnId) +
-            ",\"timestamp\":" + std::to_string(e.timestamp) + ",\"reason\":\"\"}";
-        std::string pub = e.publisher ? e.publisher : "";
-        m_frame->OnRtmMessage(json.c_str(), pub.c_str());
+            ",\"timestamp\":" + std::to_string(event.timestamp) + ",\"reason\":\"\"}";
+        std::string publisher = event.publisher ? event.publisher : "";
+        m_frame->onRTMMessage(json.c_str(), publisher.c_str());
     }
 }
 
 void CMainFrame::RtmEventHandler::onLinkStateEvent(const LinkStateEvent& event)
 {
-    CString msg;
-    msg.Format(_T("RTM link state changed: %d"), static_cast<int>(event.currentState));
-    m_frame->LogToView(msg);
-}
-
-void CMainFrame::RtmEventHandler::onSubscribeResult(const uint64_t, const char* channelName, agora::rtm::RTM_ERROR_CODE errorCode)
-{
-    CString msg;
-    msg.Format(_T("RTM subscribe channel=%S result=%d"), channelName ? channelName : "", static_cast<int>(errorCode));
-    m_frame->LogToView(msg);
-
-    if (errorCode == agora::rtm::RTM_ERROR_OK) {
-        m_frame->GenerateAgentTokenAndStart();
-    } else {
-        m_frame->PostMessage(WM_AGENT_START_FAILED, 0, 0);
-    }
-}
-
-// =============================================================================
-// ConvoAI Callbacks
-// =============================================================================
-
-void CMainFrame::OnTranscriptUpdated(const std::string&, const Transcript& transcript)
-{
-    auto it = std::find_if(m_transcripts.begin(), m_transcripts.end(), [&](const Transcript& t) {
-        return t.turnId == transcript.turnId && t.type == transcript.type && t.userId == transcript.userId;
+    m_frame->postUITask([this, state = event.currentState]() {
+        CString message;
+        message.Format(_T("RTM link state changed: %d"), static_cast<int>(state));
+        m_frame->appendDebugMessage(message);
     });
-    
-    if (it != m_transcripts.end()) {
-        *it = transcript;
-    } else {
-        m_transcripts.push_back(transcript);
+}
+
+void CMainFrame::RtmEventHandler::onPublishResult(const uint64_t requestId, agora::rtm::RTM_ERROR_CODE errorCode)
+{
+    CString message;
+    message.Format(_T("RTM publish requestId=%llu result=%d"),
+        static_cast<unsigned long long>(requestId),
+        static_cast<int>(errorCode));
+    m_frame->appendDebugMessage(message);
+    if (m_frame->m_convoAIAPI) {
+        m_frame->m_convoAIAPI->OnPublishResult(requestId, errorCode);
     }
-    
-    PostMessage(WM_TRANSCRIPT_UPDATE, 0, 0);
 }
 
-void CMainFrame::OnAgentStateChanged(const std::string&, const StateChangeEvent& event)
+void CMainFrame::RtmEventHandler::onSubscribeResult(const uint64_t requestId, const char* channelName, agora::rtm::RTM_ERROR_CODE errorCode)
 {
-    PostMessage(WM_AGENT_STATE_UPDATE, (WPARAM)event.state, 0);
+    CString message;
+    message.Format(_T("RTM subscribe channel=%S result=%d"), channelName ? channelName : "", static_cast<int>(errorCode));
+    m_frame->appendDebugMessage(message);
+    if (m_frame->m_convoAIAPI) {
+        m_frame->m_convoAIAPI->OnSubscribeResult(requestId, channelName, errorCode);
+    }
 }
 
-void CMainFrame::OnAgentError(const std::string&, const ModuleError& error)
+void CMainFrame::RtmEventHandler::onUnsubscribeResult(const uint64_t requestId, const char* channelName, agora::rtm::RTM_ERROR_CODE errorCode)
 {
-    CString msg;
-    msg.Format(_T("onAgentError module=%S code=%d message=%S"),
-        error.module.c_str(),
-        error.code,
-        error.message.c_str());
-    LogToView(msg);
+    CString message;
+    message.Format(_T("RTM unsubscribe channel=%S result=%d"), channelName ? channelName : "", static_cast<int>(errorCode));
+    m_frame->appendDebugMessage(message);
+    if (m_frame->m_convoAIAPI) {
+        m_frame->m_convoAIAPI->OnUnsubscribeResult(requestId, channelName, errorCode);
+    }
 }
 
-void CMainFrame::OnMessageError(const std::string&, const MessageError& error)
+void CMainFrame::OnSize(UINT nType, int cx, int cy)
 {
-    CString msg;
-    msg.Format(_T("onMessageError module=%S code=%d message=%S"),
-        error.module.c_str(),
-        error.code,
-        error.message.c_str());
-    LogToView(msg);
-}
-
-void CMainFrame::OnDebugLog(const std::string& log)
-{
-    LogToView(StringUtils::Utf8ToCString(log));
-}
-
-// =============================================================================
-// Async Message Handlers
-// =============================================================================
-
-LRESULT CMainFrame::OnTokenFailed(WPARAM, LPARAM)
-{
-    UpdateAgentStatus(_T("Token failed"), StatusTone::Error);
-    ShowIdleButtons();
-    return 0;
-}
-
-LRESULT CMainFrame::OnRTMLoginSuccess(WPARAM, LPARAM)
-{
-    InitializeConvoAI();
-    JoinRTCChannel(m_userToken);
-    SubscribeConvoAIMessage();
-    return 0;
-}
-
-LRESULT CMainFrame::OnRTMLoginFailed(WPARAM, LPARAM)
-{
-    UpdateAgentStatus(_T("RTM login failed"), StatusTone::Error);
-    ShowIdleButtons();
-    return 0;
-}
-
-LRESULT CMainFrame::OnAgentStarted(WPARAM, LPARAM)
-{
-    ShowActiveButtons();
-    UpdateAgentStatus(_T("Launching..."), StatusTone::Info);
-    return 0;
-}
-
-LRESULT CMainFrame::OnAgentStartFailed(WPARAM, LPARAM)
-{
-    UpdateAgentStatus(_T("Start failed"), StatusTone::Error);
-    StopSession();
-    return 0;
-}
-
-LRESULT CMainFrame::OnAgentJoined(WPARAM, LPARAM)
-{
-    if (m_isActive) UpdateAgentStatus(_T("Connected"), StatusTone::Success);
-    return 0;
-}
-
-LRESULT CMainFrame::OnAgentLeft(WPARAM, LPARAM)
-{
-    if (m_isActive) UpdateAgentStatus(_T("Disconnected"), StatusTone::Error);
-    return 0;
-}
-
-LRESULT CMainFrame::OnTranscriptUpdate(WPARAM, LPARAM)
-{
-    UpdateTranscripts();
-    return 0;
-}
-
-LRESULT CMainFrame::OnAgentStateUpdate(WPARAM wParam, LPARAM)
-{
-    static const TCHAR* states[] = { _T("Idle"), _T("Silent"), _T("Listening"), _T("Thinking"), _T("Speaking"), _T("Unknown") };
-    int idx = (int)wParam;
-    StatusTone tone = StatusTone::Neutral;
-    if (idx == 2) tone = StatusTone::Success;
-    else if (idx == 3) tone = StatusTone::Warning;
-    else if (idx == 4) tone = StatusTone::Info;
-    UpdateAgentStatus(idx >= 0 && idx < 5 ? states[idx] : states[5], tone);
-    return 0;
+    CFrameWnd::OnSize(nType, cx, cy);
+    if (cx > 0 && cy > 0 && ::IsWindow(m_debugInfoList.GetSafeHwnd())) {
+        layoutViews();
+    }
 }
 
 void CMainFrame::OnPaint()
 {
     CPaintDC dc(this);
-    CRect rc;
-    GetClientRect(&rc);
-    dc.FillSolidRect(&rc, kWindowBg);
+    CRect clientRect;
+    GetClientRect(&clientRect);
+    dc.FillSolidRect(&clientRect, kWindowBg);
 
-    DrawRoundedCard(dc, GetMessagesCardRect(), kCardBg, kCardBorder, 18);
-    if (m_statusTone != StatusTone::Hidden) {
-        COLORREF statusColor = kStatusNeutral;
-        switch (m_statusTone) {
-        case StatusTone::Success:
-            statusColor = kStatusSuccess;
-            break;
-        case StatusTone::Warning:
-            statusColor = kStatusWarning;
-            break;
-        case StatusTone::Info:
-            statusColor = kStatusInfo;
-            break;
-        case StatusTone::Error:
-            statusColor = kStatusError;
-            break;
-        case StatusTone::Hidden:
-        case StatusTone::Neutral:
-        default:
-            statusColor = kStatusNeutral;
-            break;
+    if (m_isChatSessionVisible) {
+        drawRoundedCard(dc, getMessagesCardRect(), kCardBg, kCardBorder, 18);
+        if (m_statusTone != StatusTone::Hidden) {
+            COLORREF statusColor = kStatusNeutral;
+            switch (m_statusTone) {
+            case StatusTone::Success:
+                statusColor = kStatusSuccess;
+                break;
+            case StatusTone::Warning:
+                statusColor = kStatusWarning;
+                break;
+            case StatusTone::Info:
+                statusColor = kStatusInfo;
+                break;
+            case StatusTone::Error:
+                statusColor = kStatusError;
+                break;
+            case StatusTone::Hidden:
+            case StatusTone::Neutral:
+            default:
+                statusColor = kStatusNeutral;
+                break;
+            }
+            drawRoundedCard(dc, getStatusRect(), statusColor, kCardBorder, 16);
         }
-        DrawRoundedCard(dc, GetStatusRect(), statusColor, kCardBorder, 16);
     }
-    DrawRoundedCard(dc, GetControlBarRect(), kCardBg, kCardBorder, 18);
-    DrawRoundedCard(dc, GetLogCardRect(), kCardBg, kCardBorder, 18);
+
+    drawRoundedCard(dc, getLogCardRect(), kCardBg, kCardBorder, 18);
+    drawRoundedCard(dc, getLogListRect(), kLogSurface, kCardBorder, 14);
+    drawRoundedCard(dc, getControlBarRect(), kCardBg, kCardBorder, 18);
 }
 
 BOOL CMainFrame::OnEraseBkgnd(CDC*)
@@ -1009,22 +1042,36 @@ BOOL CMainFrame::OnEraseBkgnd(CDC*)
 HBRUSH CMainFrame::OnCtlColor(CDC* pDC, CWnd* pWnd, UINT nCtlColor)
 {
     HBRUSH brush = CFrameWnd::OnCtlColor(pDC, pWnd, nCtlColor);
-
     if (!pWnd) {
         return brush;
     }
 
-    const UINT id = pWnd->GetDlgCtrlID();
-    if (pWnd == &m_headerTitle || pWnd == &m_headerSubtitle || pWnd == &m_logTitle || pWnd == &m_labelAgentStatus) {
+    if (pWnd == &m_chatSessionView.GetAgentStateView().GetLabel()) {
         pDC->SetBkMode(TRANSPARENT);
-        pDC->SetTextColor(pWnd == &m_headerTitle ? kTextPrimary : (pWnd == &m_labelAgentStatus ? m_statusTextColor : kTextSecondary));
+        pDC->SetTextColor(m_statusTextColor);
         return static_cast<HBRUSH>(GetStockObject(NULL_BRUSH));
     }
 
+    if (nCtlColor == CTLCOLOR_LISTBOX) {
+        if (pWnd == &m_debugInfoList) {
+            pDC->SetBkColor(kLogSurface);
+            pDC->SetTextColor(kTextSecondary);
+            return static_cast<HBRUSH>(m_brushLogSurface.GetSafeHandle());
+        }
+        if (pWnd == &m_chatSessionView.GetTranscriptList()) {
+            pDC->SetBkColor(kCardBg);
+            pDC->SetTextColor(kTextPrimary);
+            return static_cast<HBRUSH>(m_brushCard.GetSafeHandle());
+        }
+    }
+
+    const UINT controlId = pWnd->GetDlgCtrlID();
     if (nCtlColor == CTLCOLOR_BTN) {
         pDC->SetBkMode(TRANSPARENT);
         pDC->SetTextColor(kTextPrimary);
-        return (id == IDC_BTN_START || id == IDC_BTN_MUTE || id == IDC_BTN_STOP) ? static_cast<HBRUSH>(m_brushCard.GetSafeHandle()) : brush;
+        if (controlId == IDC_BTN_START || controlId == IDC_BTN_MUTE || controlId == IDC_BTN_STOP) {
+            return static_cast<HBRUSH>(m_brushCard.GetSafeHandle());
+        }
     }
 
     if (nCtlColor == CTLCOLOR_STATIC) {
@@ -1036,37 +1083,95 @@ HBRUSH CMainFrame::OnCtlColor(CDC* pDC, CWnd* pWnd, UINT nCtlColor)
     return brush;
 }
 
-void CMainFrame::OnCustomDrawMessages(NMHDR* pNMHDR, LRESULT* pResult)
+void CMainFrame::OnStartClicked()
 {
-    LPNMLVCUSTOMDRAW pDraw = reinterpret_cast<LPNMLVCUSTOMDRAW>(pNMHDR);
-    *pResult = CDRF_DODEFAULT;
+    startSession();
+}
 
-    if (pDraw->nmcd.dwDrawStage == CDDS_PREPAINT) {
-        *pResult = CDRF_NOTIFYITEMDRAW;
-        return;
-    }
+void CMainFrame::OnStopClicked()
+{
+    stopSession();
+}
 
-    if (pDraw->nmcd.dwDrawStage == CDDS_ITEMPREPAINT) {
-        const int index = static_cast<int>(pDraw->nmcd.dwItemSpec);
-        pDraw->clrTextBk = m_transcripts[index].type == TranscriptType::User ? kUserBubble : kCardBg;
-        pDraw->clrText = kTextPrimary;
-        *pResult = CDRF_DODEFAULT;
+void CMainFrame::OnMuteClicked()
+{
+    m_isMicMuted = !m_isMicMuted;
+    m_chatSessionView.UpdateMicButtonState(m_isMicMuted);
+    if (m_rtcEngine) {
+        m_rtcEngine->adjustRecordingSignalVolume(m_isMicMuted ? 0 : 100);
     }
 }
 
-void CMainFrame::OnCustomDrawLogs(NMHDR* pNMHDR, LRESULT* pResult)
+LRESULT CMainFrame::OnExecuteUITask(WPARAM, LPARAM lParam)
 {
-    LPNMLVCUSTOMDRAW pDraw = reinterpret_cast<LPNMLVCUSTOMDRAW>(pNMHDR);
-    *pResult = CDRF_DODEFAULT;
+    std::unique_ptr<UITask> task(reinterpret_cast<UITask*>(lParam));
+    if (task && *task) {
+        (*task)();
+    }
+    return 0;
+}
 
-    if (pDraw->nmcd.dwDrawStage == CDDS_PREPAINT) {
-        *pResult = CDRF_NOTIFYITEMDRAW;
+void CMainFrame::OnDrawItem(int nIDCtl, LPDRAWITEMSTRUCT lpDrawItemStruct)
+{
+    if (!lpDrawItemStruct || nIDCtl != IDC_LIST_MESSAGES) {
         return;
     }
 
-    if (pDraw->nmcd.dwDrawStage == CDDS_ITEMPREPAINT) {
-        pDraw->clrTextBk = kCardBg;
-        pDraw->clrText = kTextSecondary;
-        *pResult = CDRF_DODEFAULT;
+    CDC dc;
+    dc.Attach(lpDrawItemStruct->hDC);
+
+    const int index = static_cast<int>(lpDrawItemStruct->itemID);
+    CRect itemRect(lpDrawItemStruct->rcItem);
+    dc.FillSolidRect(itemRect, kCardBg);
+
+    if (index >= 0 && index < static_cast<int>(m_transcripts.size())) {
+        const Transcript& transcript = m_transcripts[index];
+        const COLORREF rowColor = transcript.type == TranscriptType::User ? kUserRow : kAgentRow;
+
+        CRect cardRect(itemRect);
+        cardRect.DeflateRect(8, 4);
+        dc.FillSolidRect(cardRect, rowColor);
+        dc.Draw3dRect(cardRect, kCardBorder, kCardBorder);
+
+        dc.SetBkMode(TRANSPARENT);
+
+        CRect headerRect(cardRect);
+        headerRect.DeflateRect(12, 10);
+        CFont* oldFont = dc.SelectObject(&m_smallFont);
+        dc.SetTextColor(kTextSecondary);
+        const CString header = buildTranscriptHeader(transcript);
+        dc.DrawText(header, &headerRect, DT_SINGLELINE | DT_NOPREFIX);
+
+        CString message = StringUtils::Utf8ToCString(transcript.text);
+        if (transcript.status != TranscriptStatus::End) {
+            message += _T(" ...");
+        }
+
+        CRect messageRect(cardRect);
+        messageRect.DeflateRect(12, 10);
+        messageRect.top += 18;
+        dc.SelectObject(&m_normalFont);
+        dc.SetTextColor(kTextPrimary);
+        dc.DrawText(message, &messageRect, DT_WORDBREAK | DT_NOPREFIX);
+        dc.SelectObject(oldFont);
     }
+
+    dc.Detach();
+}
+
+void CMainFrame::OnMeasureItem(int nIDCtl, LPMEASUREITEMSTRUCT lpMeasureItemStruct)
+{
+    if (!lpMeasureItemStruct || nIDCtl != IDC_LIST_MESSAGES) {
+        return;
+    }
+
+    const int index = static_cast<int>(lpMeasureItemStruct->itemID);
+    if (index < 0 || index >= static_cast<int>(m_transcripts.size())) {
+        lpMeasureItemStruct->itemHeight = 56;
+        return;
+    }
+
+    CClientDC dc(this);
+    lpMeasureItemStruct->itemHeight = static_cast<UINT>(
+        measureTranscriptItemHeight(dc, m_transcripts[index], getMessagesCardRect().Width() - 12));
 }

@@ -133,20 +133,24 @@ cd VoiceAgent
 windows-cpp/
 ├── VoiceAgent/
 │   ├── src/
-│   │   ├── ui/                           # UI 相关代码
-│   │   │   ├── MainFrm.h                        # 主界面头文件
-│   │   │   └── MainFrm.cpp                      # 主界面（包含 RTC 和 RTM 逻辑）
-│   │   ├── api/                          # API 相关代码
-│   │   │   ├── AgentManager.h/cpp               # Agent 启动/停止 API
-│   │   │   ├── TokenGenerator.h/cpp             # Token 生成（仅用于测试）
-│   │   │   └── HttpClient.h/cpp                 # HTTP 请求封装
+│   │   ├── ui/                           # 主控制器
+│   │   │   ├── MainFrm.h
+│   │   │   └── MainFrm.cpp
+│   │   ├── Chat/                         # 与 iOS 对齐的页面组件
+│   │   │   ├── ConnectionStartView.h/cpp
+│   │   │   ├── ChatSessionView.h/cpp
+│   │   │   └── AgentStateView.h/cpp
+│   │   ├── tools/                        # 与 iOS 对齐的工具层
+│   │   │   ├── NetworkManager.h/cpp             # Token 生成 + 通用 HTTP 入口
+│   │   │   ├── AgentManager.h/cpp               # Agent 启动/停止与请求体拼装
+│   │   │   ├── Logger.h/cpp
+│   │   │   └── StringUtils.h
+│   │   ├── api/                          # 内部 HTTP helper
+│   │   │   └── HttpClient.h/cpp
 │   │   ├── ConversationalAIAPI/          # 实时字幕组件
 │   │   ├── general/                      # 通用代码
 │   │   │   ├── pch.h/cpp                        # 预编译头
 │   │   │   └── VoiceAgent.h/cpp                 # 应用入口
-│   │   ├── tools/                        # 工具类
-│   │   │   ├── Logger.h/cpp                     # 日志工具
-│   │   │   └── StringUtils.h                    # 字符串工具
 │   │   └── KeyCenter.h                   # 配置中心（需要创建，不提交到版本控制）
 │   ├── project/
 │   │   └── VoiceAgent.vcxproj            # Visual Studio 项目文件
@@ -161,9 +165,9 @@ windows-cpp/
 ```
 
 **主要文件说明**：
-- `MainFrm.cpp`：主界面，包含日志显示、Agent 状态、转录列表和控制按钮，直接管理 RTC/RTM SDK
-- `AgentManager.cpp`：Agent 启动 API 封装，使用 `agora token=<token>` 鉴权，并内联 STT/LLM/TTS 配置
-- `TokenGenerator.cpp`：Token 生成工具（仅用于开发测试，生产环境需使用服务端生成）
+- `MainFrm.cpp`：主控制器，负责编排 `startSession -> generateUserToken -> loginRTM -> joinRTCChannel -> subscribeConvoAIMessage -> generateAgentToken -> startAgent`
+- `NetworkManager.cpp`：Token 生成与通用 HTTP 入口
+- `AgentManager.cpp`：Agent 启动/停止与请求体拼装
 
 ## 相关资源
 

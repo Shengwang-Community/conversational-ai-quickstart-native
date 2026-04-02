@@ -71,6 +71,7 @@
       <LanguageStandard>stdcpp17</LanguageStandard>
       <AdditionalIncludeDirectories>
           ..\src;
+          ..\src\Chat;
           ..\src\general;
           ..\src\ui;
           ..\src\api;
@@ -125,7 +126,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>_WINDOWS;NDEBUG;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <LanguageStandard>stdcpp17</LanguageStandard>
-      <AdditionalIncludeDirectories>..\src;..\src\general;..\src\ui;..\src\api;..\src\ConversationalAIAPI;..\src\tools;..\src\tools\dependencies;..\resources;..\rtcLib\high_level_api\include;..\rtmLib\high_level_api\include;..\vcpkg_installed\x64-windows\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\src;..\src\Chat;..\src\general;..\src\ui;..\src\api;..\src\ConversationalAIAPI;..\src\tools;..\src\tools\dependencies;..\resources;..\rtcLib\high_level_api\include;..\rtmLib\high_level_api\include;..\vcpkg_installed\x64-windows\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
     </ClCompile>
     <Link>
@@ -157,24 +158,30 @@
     <ClInclude Include="..\src\general\targetver.h" />
     <ClInclude Include="..\src\general\VoiceAgent.h" />
     <ClInclude Include="..\src\KeyCenter.h" />
+    <ClInclude Include="..\src\Chat\AgentStateView.h" />
+    <ClInclude Include="..\src\Chat\ChatSessionView.h" />
+    <ClInclude Include="..\src\Chat\ConnectionStartView.h" />
     <ClInclude Include="..\src\ui\MainFrm.h" />
-    <ClInclude Include="..\src\api\TokenGenerator.h" />
     <ClInclude Include="..\src\api\HttpClient.h" />
-    <ClInclude Include="..\src\api\AgentManager.h" />
     <ClInclude Include="..\src\ConversationalAIAPI\ConversationalAIAPI.h" />
+    <ClInclude Include="..\src\tools\AgentManager.h" />
     <ClInclude Include="..\src\tools\Logger.h" />
+    <ClInclude Include="..\src\tools\NetworkManager.h" />
     <ClInclude Include="..\src\tools\StringUtils.h" />
     <ClInclude Include="..\resources\Resource.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="..\src\Chat\AgentStateView.cpp" />
+    <ClCompile Include="..\src\Chat\ChatSessionView.cpp" />
+    <ClCompile Include="..\src\Chat\ConnectionStartView.cpp" />
     <ClCompile Include="..\src\general\pch.cpp" />
     <ClCompile Include="..\src\general\VoiceAgent.cpp" />
     <ClCompile Include="..\src\ui\MainFrm.cpp" />
-    <ClCompile Include="..\src\api\TokenGenerator.cpp" />
     <ClCompile Include="..\src\api\HttpClient.cpp" />
-    <ClCompile Include="..\src\api\AgentManager.cpp" />
     <ClCompile Include="..\src\ConversationalAIAPI\ConversationalAIAPI.cpp" />
+    <ClCompile Include="..\src\tools\AgentManager.cpp" />
     <ClCompile Include="..\src\tools\Logger.cpp" />
+    <ClCompile Include="..\src\tools\NetworkManager.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="..\resources\VoiceAgent.rc" />

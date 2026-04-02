@@ -1,77 +1,171 @@
-# Architecture — Conversational AI Quickstart macOS
+# Architecture — Conversational AI Quickstart macOS Swift
+
+## Architecture Overview
+
+This quickstart is a single-window voice conversation demo built with AppKit and programmatic views.
+
+Current scope:
+
+- Start Agent
+- RTC join + RTM login
+- Real-time transcript rendering
+- Agent status rendering
+- Mute / unmute
+- Stop Agent and cleanup
+
+Out of scope for this quickstart:
+
+- Text or image message sending UI
+- Multi-window business flow
+- Backend-owned token / agent startup flow
+
+## Page Layout
+
+The window is intentionally single-screen and is organized into these regions:
+
+- title and subtitle
+- log panel on the right
+- transcript panel
+- bottom agent status view
+- start / mute / stop controls
 
 ## Project Structure
 
-```
+```text
 macos-swift/
-├── Podfile                            # CocoaPods dependencies
+├── Podfile
 ├── VoiceAgent/
-│   ├── UI/
-│   │   ├── AppDelegate.swift          # App entry
-│   │   ├── ViewController.swift       # Main controller (connection flow, UI switching)
-│   │   ├── MessageListView.swift      # Transcript list view
-│   │   └── LogView.swift              # Debug/log panel
-│   ├── API/
-│   │   ├── AgentManager.swift         # Agora REST API (start/stop agent)
-│   │   ├── TokenGenerator.swift       # Token generation
-│   │   └── HTTPClient.swift           # Shared HTTP helper
-│   ├── ConversationalAIAPI/           # RTM message parsing layer
-│   │   ├── ConversationalAIAPI.swift
-│   │   ├── ConversationalAIAPIImpl.swift
-│   │   └── Transcript/
-│   └── KeyCenter.swift                # Credentials and provider config
-└── VoiceAgent.xcworkspace/            # ← Open this
+│   ├── AppDelegate.swift
+│   ├── ViewController.swift
+│   ├── KeyCenter.swift
+│   ├── AppColors.swift
+│   ├── Chat/
+│   │   ├── ConnectionStartView.swift
+│   │   ├── ChatSessionView.swift
+│   │   ├── AgentStateView.swift
+│   │   └── TranscriptMessageCell.swift
+│   ├── Tools/
+│   │   ├── AgentManager.swift
+│   │   └── NetworkManager.swift
+│   └── ConversationalAIAPI/
+│       └── ...        # Read-only RTM parsing / transcript component
+└── VoiceAgent.xcworkspace
 ```
 
-## Dependencies
+## Runtime Shape
 
-| Dependency | Version | Purpose |
-|------------|---------|---------|
-| ShengwangRtcEngine_macOS | 4.6.0 | Real-time audio |
-| AgoraRtm/RtmKit | 2.2.6 | Real-time messaging |
-| SnapKit | latest | Auto Layout DSL |
+```text
+ViewController /
+RTC / RTM / ConversationalAIAPI /
+NetworkManager / AgentManager
+```
 
-## Module Responsibilities
+`ConversationalAIAPI/` is a read-only module that parses RTM payloads and emits agent / transcript callbacks.
 
-### KeyCenter
-Stores all user-configurable credentials (APP_ID, API keys, vendor IDs). Equivalent to `.env`.
+## Connection Flow (User taps Start Agent)
 
-### ViewController
-Single-page desktop controller managing the log panel, transcript list, control bar, and the connection sequence: token generation → RTM login → RTC join → ConvoAI subscription → agent start.
+```text
+Tap Start Agent
+  → generate channel
+  → generate userToken
+  → login RTM
+  → join RTC
+  → subscribe RTM channel
+  → generate agentToken
+  → POST /join/ with inline ASR / LLM / TTS config
+  → save agentId
+  → show active controls
+```
 
-### AgentManager
-Wraps Agora Conversational AI REST API. Handles `start` and `stop` calls with token authentication (`agora token=` header).
+macOS-specific conventions:
 
-### TokenGenerator
-Calls the demo token service to produce RTC+RTM tokens from APP_ID + APP_CERTIFICATE.
+- `userUid` and `agentUid` are random integers and do not conflict
+- `channelName` format is `channel_macos_<6-digit-random>`
+- REST auth header is `Authorization: agora token=<userToken>`
 
-### ConversationalAIAPI
-Parses RTM messages from the Agora server into typed Swift callbacks: `onTranscriptUpdated`, `onAgentStateChanged`, `onAgentMetrics`, `onAgentError`, etc. `ViewController` implements these callbacks to update the desktop UI.
+## Transcript Data Flow
 
-### UI Views
-- `MessageListView` — Transcript list
-- `LogView` — Debug/log area
-- `ViewController` — Main window composition and state ownership
+```text
+RTM message
+  → ConversationalAIAPI
+  → ViewController.onTranscriptUpdated(...)
+  → transcripts update
+  → ChatSessionView refreshes transcript rows
+```
 
-## State Management
+The current UI renders:
 
-`ViewController` holds all state as instance properties:
+- agent transcript on the left
+- user transcript on the right
 
-| Property | Type | Lifecycle |
-|----------|------|-----------|
-| `userUid` | UInt | Random at init, fixed for controller lifetime |
-| `agentUid` | UInt | Random at init, fixed for controller lifetime |
-| `channelName` | String | Generated each time Start is tapped |
-| `userToken` | String | Generated per connection |
-| `agentToken` | String | Generated per connection |
-| `authToken` | String | Generated per connection |
-| `agentId` | String | Returned from REST API on agent start |
-| `transcripts` | [Transcript] | Accumulated during call, cleared on hang up |
-| `isMuted` | Bool | Toggled by mic button |
-| `rtcJoined` / `rtmLoggedIn` | Bool | Used to gate startup sequence |
+## UI State Rendering
 
-## Authentication
+```text
+isActive / button state  → Start / Mute / Stop controls
+agent state callback     → AgentStateView status
+transcripts              → transcript panel content
+log messages             → right-side log panel
+isMuted                  → mic button state
+```
 
-- RTC/RTM tokens: Generated via external token service using APP_ID + APP_CERTIFICATE
-- REST API: Uses the dedicated auth token in header `Authorization: agora token={authToken}`
-- No Basic Auth (REST Key/Secret) required
+## Token Flow
+
+The quickstart generates two token roles through the demo token service:
+
+| Token | Purpose | Usage |
+|-------|---------|-------|
+| `userToken` | User RTC join + RTM login + REST auth | `joinRTCChannel()` / `loginRTM()` / `Authorization` header |
+| `agentToken` | Agent RTC join credential | Request body `properties.token` |
+
+Notes:
+
+- `userToken` is generated with the current `channelName`
+- this target does not generate a separate `authToken`
+- production should replace the demo token service with a backend
+
+## Agent Lifecycle
+
+```text
+IDLE
+  → LISTENING
+  → THINKING
+  → SPEAKING
+  → LISTENING
+```
+
+Additional behavior:
+
+- the initial UI state is unknown until agent events arrive
+- tapping Stop unsubscribes RTM, stops the Agent, leaves RTC, logs out RTM, and resets desktop UI state
+
+## Config Contract
+
+```text
+KeyCenter.swift
+  → ViewController / AgentManager / NetworkManager
+```
+
+Required fields:
+
+- `AGORA_APP_ID`
+- `AGORA_APP_CERTIFICATE`
+- `LLM_API_KEY`
+- `TTS_BYTEDANCE_APP_ID`
+- `TTS_BYTEDANCE_TOKEN`
+
+Optional fields:
+
+- `LLM_URL`
+- `LLM_MODEL`
+
+Current default inline pipeline:
+
+- ASR: `fengming`
+- LLM: `aliyun` + `LLM_URL` + `LLM_MODEL`
+- TTS: `bytedance`
+
+## Constraints
+
+- This is a demo; token generation and agent startup are client-side for convenience
+- Production should move token generation and REST startup to a backend
+- `ConversationalAIAPI/` should be copied as-is and not modified in place

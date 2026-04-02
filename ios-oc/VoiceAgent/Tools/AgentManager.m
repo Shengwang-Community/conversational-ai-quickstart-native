@@ -16,7 +16,7 @@ static NSString * const API_BASE_URL = @"https://api.agora.io/cn/api/conversatio
                           token:(NSString *)token
                       completion:(void (^)(NSString * _Nullable agentId, NSError * _Nullable error))completion {
     NSString *appId = [KeyCenter AG_APP_ID];
-    NSString *urlString = [NSString stringWithFormat:@"%@/%@/join/", API_BASE_URL, appId];
+    NSString *urlString = [NSString stringWithFormat:@"%@/%@/join", API_BASE_URL, appId];
     
     [self postRequestWithURLString:urlString 
                              params:parameter 

@@ -8,6 +8,8 @@
 #include <functional>
 #include <map>
 #include <cstdint>
+#include <IAgoraRtcEngine.h>
+#include <IAgoraRtmClient.h>
 
 // Enums
 
@@ -86,6 +88,80 @@ struct ModuleError {
         : module(moduleName), code(errorCode), message(errorMessage), timestamp(ts) {}
 };
 
+enum class ConversationalAIAPIErrorType {
+    Unknown = 0,
+    RtmError = 1
+};
+
+enum class Priority {
+    Interrupt = 0,
+    Append = 1,
+    Ignore = 2
+};
+
+enum class ChatMessageType {
+    Text = 0,
+    Image = 1,
+    Unknown = 2
+};
+
+struct ConversationalAIAPIError {
+    ConversationalAIAPIErrorType type;
+    int code;
+    std::string message;
+
+    ConversationalAIAPIError()
+        : type(ConversationalAIAPIErrorType::Unknown), code(-1) {}
+
+    ConversationalAIAPIError(ConversationalAIAPIErrorType errorType, int errorCode, const std::string& errorMessage)
+        : type(errorType), code(errorCode), message(errorMessage) {}
+};
+
+class ChatMessage {
+public:
+    virtual ~ChatMessage() = default;
+    virtual ChatMessageType GetMessageType() const = 0;
+};
+
+class TextMessage : public ChatMessage {
+public:
+    Priority priority;
+    bool interruptable;
+    std::string text;
+
+    TextMessage(
+        Priority messagePriority = Priority::Interrupt,
+        bool responseInterruptable = true,
+        const std::string& messageText = ""
+    ) : priority(messagePriority), interruptable(responseInterruptable), text(messageText) {}
+
+    ChatMessageType GetMessageType() const override { return ChatMessageType::Text; }
+};
+
+class ImageMessage : public ChatMessage {
+public:
+    std::string uuid;
+    std::string url;
+    std::string base64;
+
+    ImageMessage(const std::string& imageUuid, const std::string& imageUrl = "", const std::string& imageBase64 = "")
+        : uuid(imageUuid), url(imageUrl), base64(imageBase64) {}
+
+    ChatMessageType GetMessageType() const override { return ChatMessageType::Image; }
+};
+
+struct ConversationalAIAPIConfig {
+    agora::rtc::IRtcEngine* rtcEngine;
+    agora::rtm::IRtmClient* rtmClient;
+    bool enableLog;
+
+    ConversationalAIAPIConfig(
+        agora::rtc::IRtcEngine* rtc = nullptr,
+        agora::rtm::IRtmClient* rtm = nullptr,
+        bool shouldEnableLog = true
+    ) : rtcEngine(rtc), rtmClient(rtm), enableLog(shouldEnableLog) {}
+};
+
 // Event Handler Protocol
 
 class IConversationalAIAPIEventHandler {
@@ -127,11 +203,22 @@ private:
 
 class ConversationalAIAPI {
 public:
-    ConversationalAIAPI();
+    explicit ConversationalAIAPI(const ConversationalAIAPIConfig& config = {});
     ~ConversationalAIAPI();
     
     void AddHandler(IConversationalAIAPIEventHandler* handler);
     void RemoveHandler(IConversationalAIAPIEventHandler* handler);
+    void Destroy();
+    void Chat(const std::string& agentUserId, const ChatMessage& message, std::function<void(const ConversationalAIAPIError*)> completion);
+    void Interrupt(const std::string& agentUserId, std::function<void(const ConversationalAIAPIError*)> completion);
+
+    void LoadAudioSettings();
+    void LoadAudioSettings(agora::rtc::AUDIO_SCENARIO_TYPE scenario);
+    void SubscribeMessage(const std::string& channelName, std::function<void(const ConversationalAIAPIError*)> completion);
+    void UnsubscribeMessage(const std::string& channelName, std::function<void(const ConversationalAIAPIError*)> completion);
+    void OnPublishResult(uint64_t requestId, agora::rtm::RTM_ERROR_CODE errorCode);
+    void OnSubscribeResult(uint64_t requestId, const char* channelName, agora::rtm::RTM_ERROR_CODE errorCode);
+    void OnUnsubscribeResult(uint64_t requestId, const char* channelName, agora::rtm::RTM_ERROR_CODE errorCode);
     
     /// Handle RTM message that may be split into parts (format: messageId|partIndex|totalParts|base64Content)
     /// Use this when RTM messages are split due to size limits
@@ -156,12 +243,23 @@ private:
     void NotifyAgentError(const std::string& agentUserId, const ModuleError& error);
     void NotifyMessageError(const std::string& agentUserId, const MessageError& error);
     void NotifyDebugLog(const std::string& log);
+    void PublishToUserChannel(
+        const std::string& userId,
+        const std::string& message,
+        const char* customType,
+        std::function<void(const ConversationalAIAPIError*)> completion
+    );
     
     // Generate cache key using turnId + type
     std::string GenerateCacheKey(int turnId, TranscriptType type);
     
     std::vector<IConversationalAIAPIEventHandler*> m_handlers;
     std::map<std::string, Transcript> m_transcriptCache;
+    ConversationalAIAPIConfig m_config;
+    agora::rtc::AUDIO_SCENARIO_TYPE m_audioScenario;
+    std::map<uint64_t, std::function<void(const ConversationalAIAPIError*)>> m_publishCallbacks;
+    std::map<uint64_t, std::function<void(const ConversationalAIAPIError*)>> m_subscribeCallbacks;
+    std::map<uint64_t, std::function<void(const ConversationalAIAPIError*)>> m_unsubscribeCallbacks;
     
     // Message parser for split messages
     MessageParser m_messageParser;
@@ -173,4 +271,6 @@ private:
     // Last state change event (for filtering outdated state updates)
     StateChangeEvent m_lastStateChangeEvent;
     bool m_hasStateChangeEvent;
+
+    void SetAudioConfigParameters();
 };

@@ -9,7 +9,7 @@ class AgentManager {
     static private var API_BASE_URL = "https://api.agora.io/cn/api/conversational-ai-agent/v2/projects"
 
     static func startAgent(parameter: [String: Any], token: String, completion: ((String?, Error?) -> ())?) {
-        let url = "\(API_BASE_URL)/\(KeyCenter.AGORA_APP_ID)/join/"
+        let url = "\(API_BASE_URL)/\(KeyCenter.AGORA_APP_ID)/join"
         let headers = generateHeader(token: token)
 
         NetworkManager.shared.postRequest(urlString: url, params: parameter, headers: headers) { response in

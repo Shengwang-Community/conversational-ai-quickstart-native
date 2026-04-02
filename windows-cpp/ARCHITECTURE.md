@@ -1,74 +1,167 @@
-# Architecture — Conversational AI Quickstart Windows
+# Architecture — Conversational AI Quickstart Windows C++
+
+## Architecture Overview
+
+This quickstart is a single-window voice conversation demo built with MFC.
+
+Current scope:
+
+- Start Agent
+- RTC join + RTM login
+- Real-time transcript rendering
+- Agent status rendering
+- Mute / unmute
+- Stop Agent and cleanup
+
+Out of scope for this quickstart:
+
+- Text or image message sending UI
+- Multi-window business flow
+- Backend-owned token / agent startup flow
+
+## Page Layout
+
+The window is intentionally single-screen and is organized into these regions:
+
+- title and subtitle
+- debug log panel on the right
+- transcript panel
+- bottom agent status view
+- start / mute / stop controls
 
 ## Project Structure
 
-```
+```text
 windows-cpp/
-├── VoiceAgent.sln                     # Visual Studio solution
+├── VoiceAgent.sln
 ├── VoiceAgent/
 │   ├── src/
-│   │   ├── ui/
-│   │   │   ├── MainFrm.h             # Main frame declaration
-│   │   │   └── MainFrm.cpp           # Main controller (connection flow, UI switching)
-│   │   ├── api/
-│   │   │   ├── AgentManager.h/.cpp   # Agora REST API (start/stop agent)
-│   │   │   ├── TokenGenerator.h/.cpp # Token generation
-│   │   │   └── HttpClient.h/.cpp     # Shared HTTP helper
-│   │   ├── ConversationalAIAPI/      # RTM message parsing layer
-│   │   │   ├── ConversationalAIAPI.h
-│   │   │   └── ConversationalAIAPI.cpp
-│   │   ├── General/                  # App bootstrap / PCH
-│   │   ├── tools/                    # Logger / string utils
-│   │   └── KeyCenter.h               # Credentials and provider config
-│   ├── project/                      # Visual Studio project files
-│   └── resources/                    # Native resources
+│   │   ├── General/        # App bootstrap
+│   │   ├── ui/             # MainFrm
+│   │   ├── Chat/           # ConnectionStartView / ChatSessionView / AgentStateView
+│   │   ├── tools/          # AgentManager / NetworkManager / Logger / StringUtils
+│   │   ├── api/            # HttpClient
+│   │   ├── KeyCenter.h
+│   │   └── ConversationalAIAPI/
+│   │       └── ...         # Read-only RTM parsing / transcript component
+│   ├── project/
+│   └── resources/
 ```
 
-## Dependencies
+## Runtime Shape
 
-| Dependency | Version | Purpose |
-|------------|---------|---------|
-| Agora RTC SDK | project-managed | Real-time audio |
-| Agora RTM SDK | project-managed | Real-time messaging |
-| libcurl | vcpkg | HTTP transport |
-| nlohmann-json | vcpkg | JSON build/parse |
+```text
+CMainFrame /
+RTC / RTM / ConversationalAIAPI /
+NetworkManager / AgentManager
+```
 
-## Module Responsibilities
+`ConversationalAIAPI/` is a read-only module that parses RTM payloads and emits agent / transcript callbacks.
 
-### KeyCenter
-Stores all user-configurable credentials (APP_ID, API keys, vendor IDs). Equivalent to `.env`.
+## Connection Flow (User taps Start Agent)
 
-### MainFrm
-Desktop controller that owns the log panel, transcript list, RTC/RTM instances, and startup sequence: token generation → RTM login → RTC join → ConvoAI setup → agent start.
+```text
+Tap Start Agent
+  → generate channel
+  → generate userToken
+  → login RTM
+  → join RTC
+  → subscribe RTM channel
+  → generate agentToken
+  → POST /join/ with inline ASR / LLM / TTS config
+  → save agentId
+  → switch to chat session view
+```
 
-### AgentManager
-Wraps Agora Conversational AI REST API. Handles `start` and `stop` calls with token authentication (`agora token=` header).
+Windows-specific conventions:
 
-### TokenGenerator
-Calls the demo token service to produce RTC+RTM tokens from APP_ID + APP_CERTIFICATE.
+- `m_userUid` and `m_agentUid` are random integers and do not conflict
+- channel is generated at session start in `generateRandomChannelName()`
+- REST auth header is `Authorization: agora token=<m_userToken>`
 
-### ConversationalAIAPI
-Parses RTM messages from the Agora server into typed C++ callbacks for transcript, state, error, and debug log updates. `MainFrm` implements these callbacks to update the desktop UI.
+## Transcript Data Flow
 
-## State Management
+```text
+RTM message
+  → ConversationalAIAPI
+  → CMainFrame transcript handlers
+  → m_transcripts update
+  → ChatSessionView refreshes transcript rows
+```
 
-`CMainFrame` holds all runtime state as member fields:
+The current UI renders:
 
-| Property | Type | Lifecycle |
-|----------|------|-----------|
-| `m_userUid` | unsigned int | Random at init, fixed for window lifetime |
-| `m_agentUid` | unsigned int | Random at init, fixed for window lifetime |
-| `m_channelName` | std::string | Generated each time Start is clicked |
-| `m_userToken` | std::string | Generated per connection |
-| `m_agentToken` | std::string | Generated per connection |
-| `m_authToken` | std::string | Generated per connection |
-| `m_agentId` | std::string | Returned from REST API on agent start |
-| `m_transcripts` | std::vector<Transcript> | Accumulated during call, cleared on hang up |
-| `m_isMuted` | bool | Toggled by mic button |
-| `m_rtcJoined` / `m_rtmLoggedIn` | bool | Used to gate startup sequence |
+- agent transcript on the left
+- user transcript on the right
 
-## Authentication
+## UI State Rendering
 
-- RTC/RTM tokens: Generated via external token service using APP_ID + APP_CERTIFICATE
-- REST API: Uses the dedicated auth token in header `Authorization: agora token={authToken}`
-- No Basic Auth (REST Key/Secret) required
+```text
+session status text     → Start / Launching / Error feedback
+current agent state     → AgentStateView status
+m_transcripts           → transcript list content
+debug log list          → right-side log panel
+m_isMicMuted            → mute button state
+```
+
+## Token Flow
+
+The quickstart generates two token roles through the demo token service:
+
+| Token | Purpose | Usage |
+|-------|---------|-------|
+| `m_userToken` | User RTC join + RTM login + REST auth | `joinRTCChannel()` / `loginRTM()` / `Authorization` header |
+| `m_agentToken` | Agent RTC join credential | Request body `properties.token` |
+
+Notes:
+
+- `m_userToken` is generated with the current channel
+- this target does not generate a separate `authToken`
+- production should replace the demo token service with a backend
+
+## Agent Lifecycle
+
+```text
+IDLE
+  → LISTENING
+  → THINKING
+  → SPEAKING
+  → LISTENING
+```
+
+Additional behavior:
+
+- the initial UI state is unknown until agent events arrive
+- clicking Stop unsubscribes RTM, stops the Agent, leaves RTC, logs out RTM, and resets controller state
+
+## Config Contract
+
+```text
+KeyCenter.h
+  → AgentManager / NetworkManager / CMainFrame
+```
+
+Required fields:
+
+- `AGORA_APP_ID`
+- `AGORA_APP_CERTIFICATE`
+- `LLM_API_KEY`
+- `TTS_BYTEDANCE_APP_ID`
+- `TTS_BYTEDANCE_TOKEN`
+
+Optional fields:
+
+- `LLM_URL`
+- `LLM_MODEL`
+
+Current default inline pipeline:
+
+- ASR: `fengming`
+- LLM: `aliyun` + `LLM_URL` + `LLM_MODEL`
+- TTS: `bytedance`
+
+## Constraints
+
+- This is a demo; token generation and agent startup are client-side for convenience
+- Production should move token generation and REST startup to a backend
+- `ConversationalAIAPI/` should be copied as-is and not modified in place

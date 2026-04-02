@@ -152,17 +152,59 @@ std::string MessageParser::ParseStreamMessage(const std::string& message) {
 // ConversationalAIAPI Implementation
 // ============================================================================
 
-ConversationalAIAPI::ConversationalAIAPI() 
-    : m_hasInterruptEvent(false)
+ConversationalAIAPI::ConversationalAIAPI(const ConversationalAIAPIConfig& config)
+    : m_config(config)
+    , m_audioScenario(agora::rtc::AUDIO_SCENARIO_AI_CLIENT)
+    , m_hasInterruptEvent(false)
     , m_hasStateChangeEvent(false) {
     LOG_INFO("[ConversationalAIAPI] Initialized");
     NotifyDebugLog("[ConversationalAIAPI] Initialized");
 }
 
 ConversationalAIAPI::~ConversationalAIAPI() {
+    Destroy();
+}
+
+void ConversationalAIAPI::Destroy() {
     m_handlers.clear();
     m_transcriptCache.clear();
+    m_publishCallbacks.clear();
+    m_subscribeCallbacks.clear();
+    m_unsubscribeCallbacks.clear();
     LOG_INFO("[ConversationalAIAPI] Destroyed");
+}
+
+void ConversationalAIAPI::Chat(const std::string& agentUserId, const ChatMessage& message, std::function<void(const ConversationalAIAPIError*)> completion) {
+    if (message.GetMessageType() == ChatMessageType::Text) {
+        const auto& textMessage = static_cast<const TextMessage&>(message);
+        nlohmann::json payload = {
+            {"priority", textMessage.priority == Priority::Interrupt ? "INTERRUPT" : (textMessage.priority == Priority::Append ? "APPEND" : "IGNORE")},
+            {"interruptable", textMessage.interruptable},
+            {"message", textMessage.text}
+        };
+        PublishToUserChannel(agentUserId, payload.dump(), "user.transcription", std::move(completion));
+        return;
+    }
+
+    if (message.GetMessageType() == ChatMessageType::Image) {
+        const auto& imageMessage = static_cast<const ImageMessage&>(message);
+        nlohmann::json payload = {
+            {"uuid", imageMessage.uuid},
+            {"image_url", imageMessage.url},
+            {"image_base64", imageMessage.base64}
+        };
+        PublishToUserChannel(agentUserId, payload.dump(), "image.upload", std::move(completion));
+        return;
+    }
+
+    static const ConversationalAIAPIError error(ConversationalAIAPIErrorType::Unknown, -1, "unsupported chat message type");
+    if (completion) {
+        completion(&error);
+    }
+}
+
+void ConversationalAIAPI::Interrupt(const std::string& agentUserId, std::function<void(const ConversationalAIAPIError*)> completion) {
+    PublishToUserChannel(agentUserId, "{\"customType\":\"message.interrupt\"}", "message.interrupt", std::move(completion));
 }
 
 void ConversationalAIAPI::AddHandler(IConversationalAIAPIEventHandler* handler) {
@@ -184,6 +226,165 @@ void ConversationalAIAPI::ClearCache() {
     m_hasStateChangeEvent = false;
     LOG_INFO("[ConversationalAIAPI] Cache cleared");
     NotifyDebugLog("[ConversationalAIAPI] Cache cleared");
+}
+
+void ConversationalAIAPI::LoadAudioSettings() {
+    LoadAudioSettings(agora::rtc::AUDIO_SCENARIO_AI_CLIENT);
+}
+
+void ConversationalAIAPI::LoadAudioSettings(agora::rtc::AUDIO_SCENARIO_TYPE scenario) {
+    m_audioScenario = scenario;
+    if (m_config.rtcEngine) {
+        m_config.rtcEngine->setAudioScenario(scenario);
+        SetAudioConfigParameters();
+        NotifyDebugLog("[ConversationalAIAPI] loadAudioSettings applied");
+    } else {
+        NotifyDebugLog("[ConversationalAIAPI] loadAudioSettings skipped: rtcEngine is null");
+    }
+}
+
+void ConversationalAIAPI::SetAudioConfigParameters() {
+    if (!m_config.rtcEngine) {
+        return;
+    }
+
+    const char* audioParameters[] = {
+        "{\"che.audio.aec.split_srate_for_48k\":16000}",
+        "{\"che.audio.sf.enabled\":true}",
+        "{\"che.audio.sf.stftType\":6}",
+        "{\"che.audio.sf.ainlpLowLatencyFlag\":1}",
+        "{\"che.audio.sf.ainsLowLatencyFlag\":1}",
+        "{\"che.audio.sf.procChainMode\":1}",
+        "{\"che.audio.sf.nlpDynamicMode\":1}",
+        "{\"che.audio.sf.nlpAlgRoute\":1}",
+        "{\"che.audio.sf.ainlpModelPref\":10}",
+        "{\"che.audio.sf.nsngAlgRoute\":12}",
+        "{\"che.audio.sf.ainsModelPref\":10}",
+        "{\"che.audio.sf.nsngPredefAgg\":11}",
+        "{\"che.audio.agc.enable\":false}"
+    };
+
+    for (const char* parameter : audioParameters) {
+        const int result = m_config.rtcEngine->setParameters(parameter);
+        NotifyDebugLog("[ConversationalAIAPI] setParameters ret=" + std::to_string(result) + " payload=" + parameter);
+    }
+}
+
+void ConversationalAIAPI::SubscribeMessage(const std::string& channelName, std::function<void(const ConversationalAIAPIError*)> completion) {
+    if (!m_config.rtmClient) {
+        static const ConversationalAIAPIError error(ConversationalAIAPIErrorType::Unknown, -1, "rtmClient is not initialized");
+        if (completion) {
+            completion(&error);
+        }
+        return;
+    }
+
+    ClearCache();
+    agora::rtm::SubscribeOptions options{};
+    options.withMessage = true;
+    options.withPresence = true;
+    options.withMetadata = false;
+    options.withLock = false;
+
+    uint64_t requestId = 0;
+    m_config.rtmClient->subscribe(channelName.c_str(), options, requestId);
+    if (completion) {
+        m_subscribeCallbacks[requestId] = std::move(completion);
+    }
+}
+
+void ConversationalAIAPI::UnsubscribeMessage(const std::string& channelName, std::function<void(const ConversationalAIAPIError*)> completion) {
+    if (!m_config.rtmClient) {
+        static const ConversationalAIAPIError error(ConversationalAIAPIErrorType::Unknown, -1, "rtmClient is not initialized");
+        if (completion) {
+            completion(&error);
+        }
+        return;
+    }
+
+    uint64_t requestId = 0;
+    m_config.rtmClient->unsubscribe(channelName.c_str(), requestId);
+    if (completion) {
+        m_unsubscribeCallbacks[requestId] = std::move(completion);
+    }
+}
+
+void ConversationalAIAPI::OnSubscribeResult(uint64_t requestId, const char* channelName, agora::rtm::RTM_ERROR_CODE errorCode) {
+    auto callbackIt = m_subscribeCallbacks.find(requestId);
+    if (callbackIt == m_subscribeCallbacks.end()) {
+        return;
+    }
+
+    auto completion = std::move(callbackIt->second);
+    m_subscribeCallbacks.erase(callbackIt);
+
+    if (errorCode == agora::rtm::RTM_ERROR_OK) {
+        if (completion) {
+            completion(nullptr);
+        }
+        return;
+    }
+
+    const ConversationalAIAPIError error(
+        ConversationalAIAPIErrorType::RtmError,
+        static_cast<int>(errorCode),
+        std::string("subscribe failed for channel=") + (channelName ? channelName : "")
+    );
+    if (completion) {
+        completion(&error);
+    }
+}
+
+void ConversationalAIAPI::OnPublishResult(uint64_t requestId, agora::rtm::RTM_ERROR_CODE errorCode) {
+    auto callbackIt = m_publishCallbacks.find(requestId);
+    if (callbackIt == m_publishCallbacks.end()) {
+        return;
+    }
+
+    auto completion = std::move(callbackIt->second);
+    m_publishCallbacks.erase(callbackIt);
+
+    if (errorCode == agora::rtm::RTM_ERROR_OK) {
+        if (completion) {
+            completion(nullptr);
+        }
+        return;
+    }
+
+    const ConversationalAIAPIError error(
+        ConversationalAIAPIErrorType::RtmError,
+        static_cast<int>(errorCode),
+        "publish failed"
+    );
+    if (completion) {
+        completion(&error);
+    }
+}
+
+void ConversationalAIAPI::OnUnsubscribeResult(uint64_t requestId, const char* channelName, agora::rtm::RTM_ERROR_CODE errorCode) {
+    auto callbackIt = m_unsubscribeCallbacks.find(requestId);
+    if (callbackIt == m_unsubscribeCallbacks.end()) {
+        return;
+    }
+
+    auto completion = std::move(callbackIt->second);
+    m_unsubscribeCallbacks.erase(callbackIt);
+
+    if (errorCode == agora::rtm::RTM_ERROR_OK) {
+        if (completion) {
+            completion(nullptr);
+        }
+        return;
+    }
+
+    const ConversationalAIAPIError error(
+        ConversationalAIAPIErrorType::RtmError,
+        static_cast<int>(errorCode),
+        std::string("unsubscribe failed for channel=") + (channelName ? channelName : "")
+    );
+    if (completion) {
+        completion(&error);
+    }
 }
 
 std::string ConversationalAIAPI::GenerateCacheKey(int turnId, TranscriptType type) {
@@ -403,13 +604,19 @@ void ConversationalAIAPI::HandleStateMessage(const std::string& userId, const st
         auto stateIt = messageData.find("state");
         auto turnIdIt = messageData.find("turn_id");
         auto tsMsIt = messageData.find("ts_ms");
+        auto timestampIt = messageData.find("timestamp");
         
         if (stateIt == messageData.end()) {
             return;
         }
         
         int turnId = (turnIdIt != messageData.end()) ? std::stoi(turnIdIt->second) : 0;
-        int64_t timestamp = (tsMsIt != messageData.end()) ? std::stoll(tsMsIt->second) : 0;
+        int64_t timestamp = 0;
+        if (tsMsIt != messageData.end()) {
+            timestamp = std::stoll(tsMsIt->second);
+        } else if (timestampIt != messageData.end()) {
+            timestamp = std::stoll(timestampIt->second);
+        }
         
         // Filter outdated state updates
         if (m_hasStateChangeEvent) {
@@ -521,4 +728,30 @@ void ConversationalAIAPI::NotifyMessageError(const std::string& agentUserId, con
 
 void ConversationalAIAPI::NotifyDebugLog(const std::string& log) {
     EmitLog(m_handlers, log);
+}
+
+void ConversationalAIAPI::PublishToUserChannel(
+    const std::string& userId,
+    const std::string& message,
+    const char* customType,
+    std::function<void(const ConversationalAIAPIError*)> completion
+) {
+    if (!m_config.rtmClient) {
+        static const ConversationalAIAPIError error(ConversationalAIAPIErrorType::Unknown, -1, "rtmClient is not initialized");
+        if (completion) {
+            completion(&error);
+        }
+        return;
+    }
+
+    agora::rtm::PublishOptions options{};
+    options.messageType = agora::rtm::RTM_MESSAGE_TYPE_STRING;
+    options.channelType = agora::rtm::RTM_CHANNEL_TYPE_USER;
+    options.customType = customType;
+
+    uint64_t requestId = 0;
+    if (completion) {
+        m_publishCallbacks[requestId] = std::move(completion);
+    }
+    m_config.rtmClient->publish(userId.c_str(), message.c_str(), message.size(), options, requestId);
 }
