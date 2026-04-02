@@ -12,11 +12,16 @@ Minimal, multi-platform quickstart for building a Conversational AI app with Ago
 
 | Directory | Platform | Language | Details |
 |-----------|----------|----------|---------|
-| [`android-compose/`](./android-compose/README.md) | Android | Kotlin + Compose | [View docs →](./android-compose/README.md) |
-| [`android-java/`](./android-java/README.md) | Android | Java | [View docs →](./android-java/README.md) |
 | [`android-kotlin/`](./android-kotlin/README.md) | Android | Kotlin | [View docs →](./android-kotlin/README.md) |
-| [`flutter/`](./flutter/README.md) | Android / iOS | Dart + Flutter | [View docs →](./flutter/README.md) |
+| [`android-java/`](./android-java/README.md) | Android | Java | [View docs →](./android-java/README.md) |
+| [`android-compose/`](./android-compose/README.md) | Android | Kotlin + Compose | [View docs →](./android-compose/README.md) |
 | [`ios-swift/`](./ios-swift/README.md) | iOS | Swift | [View docs →](./ios-swift/README.md) |
+| [`ios-swiftui/`](./ios-swiftui/README.md) | iOS | Swift + SwiftUI | [View docs →](./ios-swiftui/README.md) |
+| [`ios-oc/`](./ios-oc/README.md) | iOS | Objective-C | [View docs →](./ios-oc/README.md) |
+| [`macos-swift/`](./macos-swift/README.md) | macOS | Swift | [View docs →](./macos-swift/README.md) |
+| [`windows-cpp/`](./windows-cpp/README.md) | Windows | C++ | [View docs →](./windows-cpp/README.md) |
+| [`flutter/`](./flutter/README.md) | Android / iOS | Dart + Flutter | [View docs →](./flutter/README.md) |
+| [`react-native/`](./react-native/README.md) | Android / iOS | TypeScript + React Native | [View docs →](./react-native/README.md) |
 
 ### Getting Started
 
@@ -36,11 +41,16 @@ See [LICENSE](./LICENSE).
 
 | 目录 | 平台 | 语言 | 详情 |
 |------|------|------|------|
-| [`android-compose/`](./android-compose/README.md) | Android | Kotlin + Compose | [查看文档 →](./android-compose/README.md) |
-| [`android-java/`](./android-java/README.md) | Android | Java | [查看文档 →](./android-java/README.md) |
 | [`android-kotlin/`](./android-kotlin/README.md) | Android | Kotlin | [查看文档 →](./android-kotlin/README.md) |
-| [`flutter/`](./flutter/README.md) | Android / iOS | Dart + Flutter | [查看文档 →](./flutter/README.md) |
+| [`android-java/`](./android-java/README.md) | Android | Java | [查看文档 →](./android-java/README.md) |
+| [`android-compose/`](./android-compose/README.md) | Android | Kotlin + Compose | [查看文档 →](./android-compose/README.md) |
 | [`ios-swift/`](./ios-swift/README.md) | iOS | Swift | [查看文档 →](./ios-swift/README.md) |
+| [`ios-swiftui/`](./ios-swiftui/README.md) | iOS | Swift + SwiftUI | [查看文档 →](./ios-swiftui/README.md) |
+| [`ios-oc/`](./ios-oc/README.md) | iOS | Objective-C | [查看文档 →](./ios-oc/README.md) |
+| [`macos-swift/`](./macos-swift/README.md) | macOS | Swift | [查看文档 →](./macos-swift/README.md) |
+| [`windows-cpp/`](./windows-cpp/README.md) | Windows | C++ | [查看文档 →](./windows-cpp/README.md) |
+| [`flutter/`](./flutter/README.md) | Android / iOS | Dart + Flutter | [查看文档 →](./flutter/README.md) |
+| [`react-native/`](./react-native/README.md) | Android / iOS | TypeScript + React Native | [查看文档 →](./react-native/README.md) |
 
 ### 快速开始
 

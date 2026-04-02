@@ -18,6 +18,12 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     let factory = RCTReactNativeFactory(delegate: delegate)
     delegate.dependencyProvider = RCTAppDependencyProvider()
 
+    if let bundleURL = delegate.bundleURL() {
+      // Tell RN explicitly to use the embedded bundle so iOS debug runs do not
+      // surface Metro loading UI before the app home screen.
+      factory.bundleConfiguration = RCTBundleConfiguration(bundleFilePath: bundleURL)
+    }
+
     reactNativeDelegate = delegate
     reactNativeFactory = factory
 
