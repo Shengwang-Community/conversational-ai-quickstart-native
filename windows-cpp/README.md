@@ -40,9 +40,6 @@ cd conversational-ai-quickstart-native/windows-cpp
 
 2. **安装 vcpkg 依赖**：
 ```powershell
-# 进入项目目录
-cd VoiceAgent
-
 # 运行依赖安装脚本
 .\install_dependencies.ps1
 ```

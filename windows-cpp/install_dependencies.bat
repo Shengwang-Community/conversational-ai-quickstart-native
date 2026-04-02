@@ -1,22 +1,12 @@
 @echo off
 setlocal
 
-REM Simple wrapper to install Agora RTC/RTM SDKs for VoiceAgent
-REM Double-click this file to install all required Agora dependencies for the Windows demo.
+REM Double-clickable entrypoint for installing all Windows demo dependencies.
 
-echo.
-echo ================================================
-echo   Installing Agora SDKs for VoiceAgent
-echo ================================================
-echo.
-
-REM Change working directory to the folder of this BAT (VoiceAgent)
 cd /d "%~dp0"
 
-REM Try to unblock the PowerShell script in case it was downloaded from the internet
 powershell -Command "if (Test-Path '.\install_dependencies.ps1') { Unblock-File -Path '.\install_dependencies.ps1' -ErrorAction SilentlyContinue }"
 
-REM Run the PowerShell install script
 powershell -ExecutionPolicy Bypass -File ".\install_dependencies.ps1"
 if %ERRORLEVEL% NEQ 0 (
     echo.

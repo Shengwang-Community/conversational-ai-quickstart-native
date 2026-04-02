@@ -835,7 +835,7 @@ void CMainFrame::onRTMLoginResult(int errorCode)
 void CMainFrame::onRTMMessage(const char* message, const char* publisher)
 {
     if (m_convoAIAPI) {
-        m_convoAIAPI->HandleMessage(message, publisher);
+        m_convoAIAPI->HandleMessage(message ? message : "", publisher ? publisher : "");
     }
 }
 

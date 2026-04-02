@@ -34,6 +34,14 @@ enum class AgentState {
     Unknown = 5
 };
 
+enum class ModuleType {
+    LLM = 0,
+    MLLM = 1,
+    TTS = 2,
+    Context = 3,
+    Unknown = 4
+};
+
 // Data Models
 
 struct Transcript {
@@ -64,6 +72,18 @@ struct InterruptEvent {
     
     InterruptEvent() : turnId(0), timestamp(0) {}
     InterruptEvent(int tid, int64_t ts) : turnId(tid), timestamp(ts) {}
+};
+
+struct Metric {
+    ModuleType type;
+    std::string name;
+    double value;
+    int64_t timestamp;
+
+    Metric()
+        : type(ModuleType::Unknown), value(0.0), timestamp(0) {}
+    Metric(ModuleType metricType, const std::string& metricName, double metricValue, int64_t ts)
+        : type(metricType), name(metricName), value(metricValue), timestamp(ts) {}
 };
 
 struct MessageError {
@@ -169,6 +189,7 @@ public:
     virtual ~IConversationalAIAPIEventHandler() = default;
     virtual void OnAgentStateChanged(const std::string& agentUserId, const StateChangeEvent& event) = 0;
     virtual void OnTranscriptUpdated(const std::string& agentUserId, const Transcript& transcript) = 0;
+    virtual void OnAgentMetrics(const std::string& agentUserId, const Metric& metric) {}
     virtual void OnAgentError(const std::string& agentUserId, const ModuleError& error) {}
     virtual void OnMessageError(const std::string& agentUserId, const MessageError& error) {}
     virtual void OnDebugLog(const std::string& log) {}
@@ -237,9 +258,11 @@ private:
     void HandleUserMessage(const std::string& userId, const std::map<std::string, std::string>& messageData);
     void HandleInterruptMessage(const std::string& userId, const std::map<std::string, std::string>& messageData);
     void HandleStateMessage(const std::string& userId, const std::map<std::string, std::string>& messageData);
+    void HandleMetricsMessage(const std::string& userId, const std::map<std::string, std::string>& messageData);
     void HandleErrorMessage(const std::string& userId, const std::string& rawMessage, const std::map<std::string, std::string>& messageData);
     void NotifyTranscriptUpdated(const std::string& agentUserId, const Transcript& transcript);
     void NotifyStateChanged(const std::string& agentUserId, const StateChangeEvent& event);
+    void NotifyAgentMetrics(const std::string& agentUserId, const Metric& metric);
     void NotifyAgentError(const std::string& agentUserId, const ModuleError& error);
     void NotifyMessageError(const std::string& agentUserId, const MessageError& error);
     void NotifyDebugLog(const std::string& log);

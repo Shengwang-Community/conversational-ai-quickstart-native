@@ -21,6 +21,38 @@ void EmitLog(const std::vector<IConversationalAIAPIEventHandler*>& handlers, con
         }
     }
 }
+
+ModuleType ModuleTypeFromValue(const std::string& value) {
+    if (value == "llm") {
+        return ModuleType::LLM;
+    }
+    if (value == "mllm") {
+        return ModuleType::MLLM;
+    }
+    if (value == "tts") {
+        return ModuleType::TTS;
+    }
+    if (value == "context") {
+        return ModuleType::Context;
+    }
+    return ModuleType::Unknown;
+}
+
+std::string ModuleTypeToString(ModuleType type) {
+    switch (type) {
+        case ModuleType::LLM:
+            return "llm";
+        case ModuleType::MLLM:
+            return "mllm";
+        case ModuleType::TTS:
+            return "tts";
+        case ModuleType::Context:
+            return "context";
+        case ModuleType::Unknown:
+        default:
+            return "unknown";
+    }
+}
 }
 
 // ============================================================================
@@ -438,6 +470,8 @@ void ConversationalAIAPI::ParseAndDispatchMessage(const std::string& jsonString,
             HandleInterruptMessage(userId, messageData);
         } else if (messageType == "message.state") {
             HandleStateMessage(userId, messageData);
+        } else if (messageType == "message.metrics") {
+            HandleMetricsMessage(userId, messageData);
         } else if (messageType == "message.error") {
             std::string rawMessage = "";
             if (jsonValue.contains("message") && jsonValue["message"].is_string()) {
@@ -653,6 +687,51 @@ void ConversationalAIAPI::HandleStateMessage(const std::string& userId, const st
     }
 }
 
+void ConversationalAIAPI::HandleMetricsMessage(const std::string& userId, const std::map<std::string, std::string>& messageData) {
+    try {
+        std::string module = "";
+        auto moduleIt = messageData.find("module");
+        if (moduleIt != messageData.end()) {
+            module = moduleIt->second;
+        }
+
+        ModuleType metricType = ModuleTypeFromValue(module);
+        if (metricType == ModuleType::Unknown && !module.empty()) {
+            NotifyDebugLog("[ConversationalAIAPI] Unknown metric module: " + module);
+        }
+
+        std::string metricName = "unknown";
+        auto metricNameIt = messageData.find("metric_name");
+        if (metricNameIt != messageData.end() && !metricNameIt->second.empty()) {
+            metricName = metricNameIt->second;
+        }
+
+        double latencyMs = 0.0;
+        auto latencyIt = messageData.find("latency_ms");
+        if (latencyIt != messageData.end()) {
+            latencyMs = std::stod(latencyIt->second);
+        }
+
+        int64_t sendTs = 0;
+        auto sendTsIt = messageData.find("send_ts");
+        if (sendTsIt != messageData.end()) {
+            sendTs = std::stoll(sendTsIt->second);
+        }
+
+        Metric metric(metricType, metricName, latencyMs, sendTs);
+        LOG_INFO("[ConversationalAIAPI] message.metrics module=" + ModuleTypeToString(metric.type) +
+                 ", name=" + metric.name + ", value=" + std::to_string(metric.value) +
+                 ", timestamp=" + std::to_string(metric.timestamp));
+        NotifyDebugLog("[ConversationalAIAPI] message.metrics module=" + ModuleTypeToString(metric.type) +
+                       ", name=" + metric.name + ", value=" + std::to_string(metric.value) +
+                       ", timestamp=" + std::to_string(metric.timestamp));
+        NotifyAgentMetrics(userId, metric);
+    } catch (const std::exception& e) {
+        LOG_ERROR("[ConversationalAIAPI] HandleMetricsMessage error: " + std::string(e.what()));
+        NotifyDebugLog("[ConversationalAIAPI] HandleMetricsMessage error: " + std::string(e.what()));
+    }
+}
+
 void ConversationalAIAPI::HandleErrorMessage(
     const std::string& userId,
     const std::string& rawMessage,
@@ -706,6 +785,14 @@ void ConversationalAIAPI::NotifyStateChanged(const std::string& agentUserId, con
     for (auto handler : m_handlers) {
         if (handler) {
             handler->OnAgentStateChanged(agentUserId, event);
+        }
+    }
+}
+
+void ConversationalAIAPI::NotifyAgentMetrics(const std::string& agentUserId, const Metric& metric) {
+    for (auto handler : m_handlers) {
+        if (handler) {
+            handler->OnAgentMetrics(agentUserId, metric);
         }
     }
 }
