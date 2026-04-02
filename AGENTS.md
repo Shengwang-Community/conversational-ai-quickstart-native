@@ -20,6 +20,7 @@ This repo is meant to be a reference implementation — keep it simple, read the
 | `windows-cpp/` | Windows | C++ |
 | `flutter/` | Android / iOS | Dart + Flutter |
 | `react-native/` | Android / iOS | TypeScript + React Native |
+| `unity/` | Unity | C# + Unity |
 
 Each platform does the same thing with its own idioms. If you need to understand the pattern, either one tells the full story.
 

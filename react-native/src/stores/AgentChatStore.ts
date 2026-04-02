@@ -189,10 +189,6 @@ export const useAgentChatStore = create<AgentChatStore>((set, get) => {
       'setAudioScenario',
       rtcEngine.setAudioScenario(AudioScenarioType.AudioScenarioAiClient),
     );
-    ensureRtcCallSucceeded(
-      'setDefaultAudioRouteToSpeakerphone',
-      rtcEngine.setDefaultAudioRouteToSpeakerphone(true),
-    );
     await applyRtcAudioRouteParameters(AudioRoute.RouteSpeakerphone);
   };
 

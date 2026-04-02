@@ -14,6 +14,7 @@
 ├── windows-cpp/             # Windows quickstart (C++)
 ├── flutter/                 # Flutter quickstart (Dart + Flutter, Android/iOS)
 ├── react-native/            # React Native quickstart (TypeScript, Android/iOS)
+├── unity/                   # Unity quickstart (C# + Unity)
 ├── README.md                # Repo overview
 ├── AGENTS.md                # Repo-level agent guide
 └── ARCHITECTURE.md          # Repo-level architecture overview
@@ -35,6 +36,7 @@ Each platform directory owns its own `README.md`, `AGENTS.md`, `ARCHITECTURE.md`
 | Windows C++ | `VoiceAgent.sln` + project / vcpkg deps | `KeyCenter.h` | `src/ui/MainFrm.cpp` | `src/api/AgentManager.h/.cpp` | `src/api/TokenGenerator.h/.cpp` | `src/ConversationalAIAPI/` | `src/ui/MainFrm.h/.cpp` |
 | Flutter | `pubspec.yaml` + native `android/` / `ios/` configs | `assets/.env` + `lib/services/keycenter.dart` | `lib/agent_chat_page.dart` | `lib/services/agent_starter.dart` | `lib/services/token_generator.dart` | `lib/services/agent_event_parser.dart` + `lib/services/transcript_manager.dart` | `lib/main.dart` + `lib/agent_chat_page.dart` |
 | React Native | `package.json` + native `android/` / `ios/` configs | `.env` + `src/utils/KeyCenter.ts` | `src/stores/AgentChatStore.ts` + `src/components/AgentChatPage.tsx` | `src/api/AgentStarter.ts` | `src/api/TokenGenerator.ts` | `src/utils/MessageParser.ts` | `App.tsx` + `src/components/AgentChatPage.tsx` |
+| Unity | imported `Assets/Agora-RTC-Plugin/` + `Assets/Agora-RTM-Plugin/` + `ProjectSettings/ProjectVersion.txt` | `Assets/Resources/env.txt` + `Assets/Scripts/Startup/EnvConfig.cs` | `Assets/Scripts/Startup/AgentStartup.cs` | `Assets/Scripts/Startup/AgentStarter.cs` | `Assets/Scripts/Startup/TokenGenerator.cs` | `Assets/Scripts/Startup/TranscriptManager.cs` | `Assets/Scenes/SampleScene.unity` + `Assets/Scripts/Startup/AgentStartup.cs` |
 
 ## How It Fits Together
 
