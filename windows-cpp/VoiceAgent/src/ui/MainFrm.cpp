@@ -901,6 +901,9 @@ void CMainFrame::OnMessageError(const std::string&, const MessageError& error)
 void CMainFrame::OnDebugLog(const std::string& log)
 {
     postUITask([this, log]() {
+        if (log.find("[ConversationalAIAPI] message.metrics ") != std::string::npos) {
+            return;
+        }
         appendDebugMessage(StringUtils::Utf8ToCString(log));
     });
 }

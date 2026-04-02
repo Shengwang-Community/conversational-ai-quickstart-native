@@ -157,7 +157,7 @@ npm start
 
 - 确保已正确配置 `.env`
 - 确保控制台已启用 `App Certificate`
-- 当前消息链路使用 RTC DataStream，因此 `/join/` 请求体会保留 `data_channel=datastream`
+- 当前消息链路使用 RTC DataStream，因此 `/join` 请求体会保留 `data_channel=datastream`
 
 **适用场景**：
 
@@ -203,7 +203,7 @@ npm start
   - 加入 RTC 频道
   - 创建 RTC DataStream
   - 生成 `agentToken` 与 `authToken`
-  - 调用 `/join/` 启动 Agent
+  - 调用 `/join` 启动 Agent
 - 如果启动失败，页面会进入 `Error` 状态
 - Agent 启动成功后：
   - `Start Agent` 按钮隐藏

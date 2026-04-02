@@ -72,7 +72,7 @@ Tap Start Agent
   → join RTC
   → subscribe RTM channel
   → generate agentToken
-  → POST /join/ with inline ASR / LLM / TTS config
+  → POST /join with inline ASR / LLM / TTS config
   → save agentId
   → show active controls
 ```

@@ -68,7 +68,7 @@ Tap Start Agent
   → join RTC
   → subscribe RTM channel
   → generate agentToken + authToken
-  → POST /join/ with inline ASR / LLM / TTS config
+  → POST /join with inline ASR / LLM / TTS config
   → save agentId
   → switch to chat view
 ```

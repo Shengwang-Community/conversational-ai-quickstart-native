@@ -83,7 +83,7 @@ For runtime structure, see `ARCHITECTURE.md`. For entry files, see `README.md`.
 
 ### AgentStarter
 
-- `startAgent()`: POST `/join/`, request body carries full pipeline config
+- `startAgent()`: POST `/join`, request body carries full pipeline config
   - STT: Fengming ASR
   - LLM: 阿里云百炼千问（DashScope OpenAI-compatible endpoint）
   - TTS: 火山引擎（token + app_id + cluster + voice_type）
@@ -170,7 +170,7 @@ Client directly calls ShengWang REST API (demo mode):
 
 | Endpoint | Method | Auth Header | Description |
 |----------|--------|-------------|-------------|
-| `api.sd-rtn.com/cn/api/conversational-ai-agent/v2/projects/{appId}/join/` | POST | `Authorization: agora token=<authToken>` | Start Agent |
+| `api.sd-rtn.com/cn/api/conversational-ai-agent/v2/projects/{appId}/join` | POST | `Authorization: agora token=<authToken>` | Start Agent |
 | `api.sd-rtn.com/cn/api/conversational-ai-agent/v2/projects/{appId}/agents/{agentId}/leave` | POST | `Authorization: agora token=<authToken>` | Stop Agent |
 
 Token generated via demo service (must be replaced with your own backend in production):
@@ -263,5 +263,5 @@ User Action → AgentChatPage → ShengWang SDK (RTC / RTM)
 4. Join RTC channel
 5. Initialize RTM client → login RTM → subscribe message channel
 6. Generate `agentToken` and `authToken` (same channel, uid is `agentUid`)
-7. POST `/join/` to start Agent
+7. POST `/join` to start Agent
 8. Receive RTM presence / message events → update transcript list, agent state, and logs

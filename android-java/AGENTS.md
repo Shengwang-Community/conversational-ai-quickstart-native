@@ -74,7 +74,7 @@ For runtime structure, see `ARCHITECTURE.md`. For entry files, see `README.md`.
 
 ### AgentStarter
 
-- `startAgentAsync()` sends `POST /join/` with a full inline three-stage pipeline body
+- `startAgentAsync()` sends `POST /join` with a full inline three-stage pipeline body
   - ASR: Fengming
   - LLM: Aliyun / Qwen-compatible endpoint
   - TTS: ByteDance / Volcengine
@@ -143,7 +143,7 @@ Client directly calls ShengWang REST API in Demo mode:
 
 | Endpoint | Method | Auth Header | Description |
 |----------|--------|-------------|-------------|
-| `api.agora.io/cn/api/conversational-ai-agent/v2/projects/{appId}/join/` | POST | `Authorization: agora token=<authToken>` | Start Agent |
+| `api.agora.io/cn/api/conversational-ai-agent/v2/projects/{appId}/join` | POST | `Authorization: agora token=<authToken>` | Start Agent |
 | `api.agora.io/cn/api/conversational-ai-agent/v2/projects/{appId}/agents/{agentId}/leave` | POST | `Authorization: agora token=<authToken>` | Stop Agent |
 
 Demo token service endpoint:

@@ -171,7 +171,7 @@ flutter create --platforms=android,ios .
   - 初始化并登录 RTM
   - 订阅当前随机频道
   - 生成 `agentToken` 与 `authToken`
-  - 调用 `/join/` 启动 Agent
+  - 调用 `/join` 启动 Agent
 - 如果中途失败，按钮会切换为 `Retry`
 - Agent 启动成功后：
   - `Start Agent` 按钮隐藏

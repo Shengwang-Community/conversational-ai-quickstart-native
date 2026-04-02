@@ -62,7 +62,7 @@ For runtime structure, see `ARCHITECTURE.md`. For entry files, see `README.md`.
 
 ### AgentManager
 
-- `startAgentWithParameter:token:`: POST `/join/`, request body carries full pipeline config
+- `startAgentWithParameter:token:`: POST `/join`, request body carries full pipeline config
   - STT: Fengming ASR
   - LLM: Aliyun-compatible configuration pointing to the DeepSeek OpenAI-compatible endpoint
   - TTS: ByteDance / Volcengine
@@ -131,7 +131,7 @@ Client directly calls ShengWang REST API (Demo mode):
 
 | Endpoint | Method | Auth Header | Description |
 |----------|--------|-------------|-------------|
-| `api.agora.io/cn/api/conversational-ai-agent/v2/projects/{appId}/join/` | POST | `Authorization: agora token=<authToken>` | Start Agent |
+| `api.agora.io/cn/api/conversational-ai-agent/v2/projects/{appId}/join` | POST | `Authorization: agora token=<authToken>` | Start Agent |
 | `api.agora.io/cn/api/conversational-ai-agent/v2/projects/{appId}/agents/{agentId}/leave` | POST | `Authorization: agora token=<authToken>` | Stop Agent |
 
 Token generated via Demo service (must be replaced with your own backend in production):

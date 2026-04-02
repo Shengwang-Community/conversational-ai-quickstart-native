@@ -140,7 +140,7 @@ User taps Start Agent
     → create RTC DataStream
     → generate agent token
     → generate REST auth token
-    → POST /join/
+    → POST /join
     → save agentId + authToken
     → set connectionState = Connected
 ```
@@ -259,7 +259,7 @@ Current usage:
 | Token Request | UID | Purpose |
 |---------------|-----|---------|
 | user token | `USER_ID` | RTC join for the local user |
-| agent token | `AGENT_RTC_UID` | Agent RTC credential in `/join/` |
+| agent token | `AGENT_RTC_UID` | Agent RTC credential in `/join` |
 | REST auth token | `USER_ID` | `Authorization: agora token=<token>` header |
 
 All tokens use the same current channel name.

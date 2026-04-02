@@ -83,7 +83,7 @@ For runtime structure, see `ARCHITECTURE.md`. For entry files, see `README.md`.
 
 ### AgentStarter
 
-- `startAgentAsync()`: POST `/join/`, request body carries full three-stage pipeline config
+- `startAgentAsync()`: POST `/join`, request body carries full three-stage pipeline config
   - STT: Fengming ASR
   - LLM: 阿里云百炼千问（DashScope OpenAI-compatible endpoint）
   - TTS: 火山引擎（token + app_id + cluster + voice_type）
@@ -157,7 +157,7 @@ Client directly calls ShengWang REST API (Demo mode):
 
 | Endpoint | Method | Auth Header | Description |
 |----------|--------|-------------|-------------|
-| `api.agora.io/cn/api/conversational-ai-agent/v2/projects/{appId}/join/` | POST | `Authorization: agora token=<authToken>` | Start Agent |
+| `api.agora.io/cn/api/conversational-ai-agent/v2/projects/{appId}/join` | POST | `Authorization: agora token=<authToken>` | Start Agent |
 | `api.agora.io/cn/api/conversational-ai-agent/v2/projects/{appId}/agents/{agentId}/leave` | POST | `Authorization: agora token=<authToken>` | Stop Agent |
 
 Token generated via Demo service (must be replaced with your own backend in production):

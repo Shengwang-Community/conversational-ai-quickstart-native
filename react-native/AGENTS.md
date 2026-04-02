@@ -27,7 +27,7 @@ Current scope is limited to voice session startup, transcript display, agent sta
 
 Conversational AI Quickstart — React Native real-time voice conversation client.
 
-The client directly calls ShengWang RESTful API to start and stop the Agent. STT, LLM, and TTS configuration are embedded in the `/join/` request body and authenticated via HTTP token:
+The client directly calls ShengWang RESTful API to start and stop the Agent. STT, LLM, and TTS configuration are embedded in the `/join` request body and authenticated via HTTP token:
 
 ```text
 Authorization: agora token=<token>
@@ -102,7 +102,7 @@ For runtime structure, see `ARCHITECTURE.md`. For setup and usage, see `README.m
 
 ### AgentStarter
 
-- `startAgentAsync()`: POST `/join/`
+- `startAgentAsync()`: POST `/join`
 - `stopAgentAsync()`: POST `/agents/{agentId}/leave`
 - Inlines current pipeline configuration:
   - ASR: `fengming`
@@ -190,7 +190,7 @@ Client directly calls ShengWang REST API in demo mode:
 
 | Endpoint | Method | Description |
 |----------|--------|-------------|
-| `api.sd-rtn.com/cn/api/conversational-ai-agent/v2/projects/{appId}/join/` | POST | Start Agent |
+| `api.sd-rtn.com/cn/api/conversational-ai-agent/v2/projects/{appId}/join` | POST | Start Agent |
 | `api.sd-rtn.com/cn/api/conversational-ai-agent/v2/projects/{appId}/agents/{agentId}/leave` | POST | Stop Agent |
 
 Token generation endpoint:

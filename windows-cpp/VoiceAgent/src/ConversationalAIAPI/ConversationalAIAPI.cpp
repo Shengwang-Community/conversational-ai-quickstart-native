@@ -696,9 +696,6 @@ void ConversationalAIAPI::HandleMetricsMessage(const std::string& userId, const 
         }
 
         ModuleType metricType = ModuleTypeFromValue(module);
-        if (metricType == ModuleType::Unknown && !module.empty()) {
-            NotifyDebugLog("[ConversationalAIAPI] Unknown metric module: " + module);
-        }
 
         std::string metricName = "unknown";
         auto metricNameIt = messageData.find("metric_name");
