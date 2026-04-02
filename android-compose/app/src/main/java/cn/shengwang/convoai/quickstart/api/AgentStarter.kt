@@ -47,7 +47,7 @@ object AgentStarter {
     ): Result<String> = withContext(Dispatchers.IO) {
         try {
             val projectId = KeyCenter.APP_ID
-            val url = "$API_BASE_URL/$projectId/join/"
+            val url = "$API_BASE_URL/$projectId/join"
 
             val requestBody = buildJsonPayload(
                 name = channelName,

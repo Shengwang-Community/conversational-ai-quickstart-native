@@ -108,7 +108,7 @@ class AgentStarter {
     required String remoteRtcUid,
   }) async {
     final projectId = KeyCenter.appId;
-    final url = Uri.parse('$_base/$projectId/join/');
+    final url = Uri.parse('$_base/$projectId/join');
     final body = jsonEncode(
       _buildJsonPayload(
         channelName: channelName,

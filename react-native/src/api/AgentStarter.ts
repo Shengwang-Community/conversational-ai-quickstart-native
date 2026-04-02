@@ -211,7 +211,7 @@ export class AgentStarter {
     this.ensureInlineProviderConfig();
 
     const projectId = KeyCenter.APP_ID;
-    const url = `${this.API_BASE_URL}/${projectId}/join/`;
+    const url = `${this.API_BASE_URL}/${projectId}/join`;
     const requestBody = this.buildJsonPayload({
       channelName: request.channelName,
       agentRtcUid: request.agentRtcUid || this.DEFAULT_AGENT_RTC_UID,

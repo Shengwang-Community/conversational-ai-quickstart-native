@@ -52,7 +52,7 @@ public class AgentStarter {
         executorService.execute(() -> {
             try {
                 String projectId = KeyCenter.APP_ID;
-                String url = AGORA_API_BASE_URL + "/" + projectId + "/join/";
+                String url = AGORA_API_BASE_URL + "/" + projectId + "/join";
 
                 JSONObject requestBody = buildJsonPayload(
                     channelName,
