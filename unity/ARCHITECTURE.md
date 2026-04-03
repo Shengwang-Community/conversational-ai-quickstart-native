@@ -36,11 +36,13 @@ unity/
 | Agent state and error parsing | `Assets/Scripts/Quickstart/AgentEventParser.cs` |
 | Transcript parsing and upsert | `Assets/Scripts/Quickstart/TranscriptManager.cs` |
 | Main UI | `Assets/Scenes/SampleScene.unity` |
+| Mobile package / app naming | `ProjectSettings/ProjectSettings.asset` |
 
 ## Runtime Flow
 
 ```text
 User clicks Start
+  → on Android, request microphone permission if needed
   → load env config
   → generate user token
   → initialize RTC
@@ -72,7 +74,9 @@ Current inline provider defaults:
 
 ## UI Model
 
-`SampleScene.unity` is a single-scene demo with:
+`SampleScene.unity` is still a single-scene demo, but the runtime layout is rebuilt by `AgentStartup.cs`.
+
+Scene references:
 
 - `LogText` for runtime status logs
 - `TranscriptText` for transcript output
@@ -80,4 +84,27 @@ Current inline provider defaults:
 - `MuteButton`
 - `StopButton`
 
-`AgentStartup.cs` updates these controls directly.
+Runtime behavior:
+
+- Header shows app title and session summary
+- Main content shows `Transcript` and `Log`
+- Landscape prefers left/right split
+- Narrow screens stack transcript over log
+- Bottom action bar shows `Start Agent` / `Mute` / `Stop Agent`
+
+## Build Targets
+
+This Unity quickstart is currently oriented to:
+
+- macOS Editor play
+- Android device builds
+- iOS device builds
+
+Android export can be used with `Export Project` and opened in Android Studio.
+iOS export is expected to be opened in Xcode.
+
+## iOS Export Notes
+
+- `ProjectSettings/ProjectSettings.asset` provides the iOS bundle identifier and privacy usage descriptions
+- RTC and RTM iOS plugin metadata must keep the iPhone target enabled so the exported app embeds the required frameworks
+- After changing bundle identifiers, privacy descriptions, or iOS plugin import settings, regenerate the Xcode project instead of reusing an old export

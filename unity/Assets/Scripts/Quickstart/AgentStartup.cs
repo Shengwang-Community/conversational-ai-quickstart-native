@@ -27,6 +27,7 @@ namespace Quickstart
         private string _agentStateText = "Idle";
         private int _lastAgentStateTurnId = -1;
         private bool _muted = false;
+        private bool _permissionRequestInFlight = false;
         private ScrollRect _logScrollRect;
         private RectTransform _logContentRect;
         private ScrollRect _transcriptScrollRect;
@@ -260,12 +261,12 @@ namespace Quickstart
             headerLayout.childControlHeight = false;
             headerLayout.childForceExpandWidth = true;
             headerLayout.childForceExpandHeight = false;
-            CreateTextElement(header, "Title", "Shengwang Conversational AI", 21, FontStyle.Bold, PrimaryTextColor, TextAnchor.MiddleLeft);
+            CreateTextElement(header, "Title", "Shengwang Conversational AI", 23, FontStyle.Bold, PrimaryTextColor, TextAnchor.MiddleLeft);
             _sessionMetaTextView = CreateTextElement(
                 header,
                 "SessionMeta",
                 "Channel  --    •    Mic  Ready    •    Agent  Idle",
-                12,
+                14,
                 FontStyle.Normal,
                 SecondaryTextColor,
                 TextAnchor.MiddleLeft
@@ -288,29 +289,29 @@ namespace Quickstart
             var transcriptHeaderCopy = CreateUiObject("TranscriptHeaderCopy", transcriptHeader);
             var transcriptHeaderCopyElement = EnsureComponent<LayoutElement>(transcriptHeaderCopy.gameObject);
             transcriptHeaderCopyElement.flexibleWidth = 1f;
-            var transcriptTitle = CreateTextElement(transcriptHeaderCopy, "TranscriptTitle", "Transcript", 18, FontStyle.Bold, PrimaryTextColor, TextAnchor.MiddleLeft);
+            var transcriptTitle = CreateTextElement(transcriptHeaderCopy, "TranscriptTitle", "Transcript", 20, FontStyle.Bold, PrimaryTextColor, TextAnchor.MiddleLeft);
             Stretch(transcriptTitle.rectTransform, 0f, 0f, 0f, 0f);
 
             var stateBadge = CreateUiObject("AgentStateBadge", transcriptHeader);
             var stateBadgeElement = EnsureComponent<LayoutElement>(stateBadge.gameObject);
-            stateBadgeElement.preferredWidth = 72f;
-            stateBadgeElement.preferredHeight = 24f;
-            _agentStateTextView = CreateTextElement(stateBadge, "AgentStateText", "Idle", 12, FontStyle.Bold, AgentStateTextColor("Idle"), TextAnchor.MiddleRight);
+            stateBadgeElement.preferredWidth = ScaleSize(88f);
+            stateBadgeElement.preferredHeight = ScaleSize(28f);
+            _agentStateTextView = CreateTextElement(stateBadge, "AgentStateText", "Idle", 14, FontStyle.Bold, AgentStateTextColor("Idle"), TextAnchor.MiddleRight);
             Stretch(_agentStateTextView.rectTransform, 0f, 0f, 0f, 0f);
 
             _transcriptBodyRect = CreateUiObject("TranscriptBody", transcriptPanel);
             TranscriptText.transform.SetParent(_transcriptBodyRect, false);
-            StyleReadingText(TranscriptText, 16, 1.28f);
+            StyleReadingText(TranscriptText, 18, 1.28f);
 
             var logPanel = CreatePanel(_mainPanelsRect, "LogPanel", out _, out _);
             _logPanelRect = logPanel;
             _logHeaderRect = CreateUiObject("LogHeader", logPanel);
-            var logTitle = CreateTextElement(_logHeaderRect, "LogTitle", "Log", 18, FontStyle.Bold, PrimaryTextColor, TextAnchor.MiddleLeft);
+            var logTitle = CreateTextElement(_logHeaderRect, "LogTitle", "Log", 20, FontStyle.Bold, PrimaryTextColor, TextAnchor.MiddleLeft);
             Stretch(logTitle.rectTransform, 0f, 0f, 0f, 0f);
 
             _logBodyRect = CreateUiObject("LogBody", logPanel);
             LogText.transform.SetParent(_logBodyRect, false);
-            StyleReadingText(LogText, 13, 1.22f);
+            StyleReadingText(LogText, 15, 1.24f);
 
             _footerRect = CreateUiObject("Footer", _shellRect);
             _actionRowRect = CreateUiObject("ActionRow", _footerRect);
@@ -498,9 +499,9 @@ namespace Quickstart
 
             var panelWidth = Mathf.Max(0f, panelRect.rect.width);
             var panelHeight = Mathf.Max(0f, panelRect.rect.height);
-            var inset = 14f;
-            var headerHeight = 28f;
-            var bodyTop = inset + headerHeight + 10f;
+            var inset = ScaleSize(16f);
+            var headerHeight = ScaleSize(32f);
+            var bodyTop = inset + headerHeight + ScaleSize(10f);
             var bodyHeight = Mathf.Max(60f, panelHeight - bodyTop - inset);
 
             SetFrame(headerRect, inset, inset, Mathf.Max(0f, panelWidth - inset * 2f), headerHeight);
@@ -513,8 +514,8 @@ namespace Quickstart
 
             var rowWidth = Mathf.Max(0f, _actionRowRect.rect.width);
             var rowHeight = Mathf.Max(0f, _actionRowRect.rect.height);
-            var buttonGap = compact ? 10f : 12f;
-            var buttonHeight = 44f;
+            var buttonGap = compact ? ScaleSize(10f) : ScaleSize(12f);
+            var buttonHeight = ScaleSize(50f);
 
             var visibleButtons = new List<Button>();
             if (StartButton != null && StartButton.gameObject.activeSelf) visibleButtons.Add(StartButton);
@@ -585,7 +586,7 @@ namespace Quickstart
             var label = button.GetComponentInChildren<Text>(true);
             if (label != null)
             {
-                label.fontSize = 15;
+                label.fontSize = ResolveFontSize(17);
                 label.fontStyle = FontStyle.Bold;
                 label.alignment = TextAnchor.MiddleCenter;
                 label.color = labelColor;
@@ -594,8 +595,8 @@ namespace Quickstart
             }
 
             var layout = EnsureComponent<LayoutElement>(button.gameObject);
-            layout.minHeight = 46f;
-            layout.preferredHeight = 46f;
+            layout.minHeight = ScaleSize(50f);
+            layout.preferredHeight = ScaleSize(50f);
             layout.flexibleWidth = 1f;
 
             var outline = EnsureComponent<Outline>(button.gameObject);
@@ -607,7 +608,7 @@ namespace Quickstart
         {
             if (text == null) return;
 
-            text.fontSize = fontSize;
+            text.fontSize = ResolveFontSize(fontSize);
             text.fontStyle = FontStyle.Normal;
             text.lineSpacing = lineSpacing;
             text.color = PrimaryTextColor;
@@ -630,7 +631,7 @@ namespace Quickstart
             var text = textRect.GetComponent<Text>();
             text.text = value;
             text.font = GetBuiltinFont();
-            text.fontSize = fontSize;
+            text.fontSize = ResolveFontSize(fontSize);
             text.fontStyle = fontStyle;
             text.color = color;
             text.alignment = alignment;
@@ -639,6 +640,27 @@ namespace Quickstart
             text.verticalOverflow = VerticalWrapMode.Overflow;
             text.raycastTarget = false;
             return text;
+        }
+
+        private int ResolveFontSize(int baseSize)
+        {
+            return Mathf.RoundToInt(baseSize * GetUiScale());
+        }
+
+        private float ScaleSize(float baseSize)
+        {
+            return baseSize * GetUiScale();
+        }
+
+        private float GetUiScale()
+        {
+#if UNITY_ANDROID || UNITY_IOS
+            var minDimension = Mathf.Min(Screen.width, Screen.height);
+            if (minDimension >= 1440f) return 1.2f;
+            if (minDimension >= 1080f) return 1.14f;
+            if (minDimension >= 720f) return 1.08f;
+#endif
+            return 1f;
         }
 
         private Font GetBuiltinFont()
@@ -825,6 +847,16 @@ namespace Quickstart
 
         private void OnStart()
         {
+            if (!TryRequestRuntimePermissions())
+            {
+                return;
+            }
+
+            BeginStart();
+        }
+
+        private void BeginStart()
+        {
             if (StartButton != null) StartButton.interactable = false;
             _agentStateText = "Idle";
             _lastAgentStateTurnId = -1;
@@ -836,6 +868,54 @@ namespace Quickstart
             StartCoroutine(StartFlow());
         }
 
+        private bool TryRequestRuntimePermissions()
+        {
+#if UNITY_ANDROID && !UNITY_EDITOR
+            if (_permissionRequestInFlight)
+            {
+                return false;
+            }
+
+            if (!UnityEngine.Android.Permission.HasUserAuthorizedPermission(UnityEngine.Android.Permission.Microphone))
+            {
+                _permissionRequestInFlight = true;
+                AppendLog("Requesting microphone permission...");
+                UnityEngine.Android.Permission.RequestUserPermission(UnityEngine.Android.Permission.Microphone);
+                StartCoroutine(WaitForMicrophonePermission());
+                return false;
+            }
+#endif
+            return true;
+        }
+
+        private IEnumerator WaitForMicrophonePermission()
+        {
+#if UNITY_ANDROID && !UNITY_EDITOR
+            const float timeoutSeconds = 10f;
+            var elapsed = 0f;
+
+            while (elapsed < timeoutSeconds)
+            {
+                if (UnityEngine.Android.Permission.HasUserAuthorizedPermission(UnityEngine.Android.Permission.Microphone))
+                {
+                    _permissionRequestInFlight = false;
+                    AppendLog("Microphone permission granted");
+                    BeginStart();
+                    yield break;
+                }
+
+                elapsed += 0.25f;
+                yield return new WaitForSeconds(0.25f);
+            }
+
+            _permissionRequestInFlight = false;
+            AppendLog("Microphone permission is required on Android");
+            if (StartButton != null) StartButton.interactable = true;
+#else
+            yield break;
+#endif
+        }
+
         private IEnumerator StartFlow()
         {
             string userToken = null;
@@ -844,7 +924,18 @@ namespace Quickstart
                 (err) => { AppendLog("获取 Token 失败: " + err); Debug.LogError("获取 Token 失败: " + err); });
             if (string.IsNullOrEmpty(userToken)) { StartButton.interactable = true; yield break; }
 
-            _rtc = Agora.Rtc.RtcEngine.CreateAgoraRtcEngine();
+            try
+            {
+                _rtc = Agora.Rtc.RtcEngine.CreateAgoraRtcEngine();
+            }
+            catch (DllNotFoundException e)
+            {
+                AppendLog("RtcEngine 初始化失败: " + e.Message);
+                Debug.LogError("Agora RTC native plugin is unavailable in Editor: " + e);
+                if (StartButton != null) StartButton.interactable = true;
+                yield break;
+            }
+
             var ctx = new RtcEngineContext();
             ctx.appId = EnvConfig.AppId;
             ctx.channelProfile = CHANNEL_PROFILE_TYPE.CHANNEL_PROFILE_LIVE_BROADCASTING;
@@ -880,6 +971,11 @@ namespace Quickstart
                 rtmInitOk = true;
                 AppendLog("RtmClient 初始化成功");
                 Debug.Log("RtmClient 初始化成功");
+            }
+            catch (DllNotFoundException e)
+            {
+                AppendLog("RtmClient 初始化失败: " + e.Message);
+                Debug.LogError("Agora RTM native plugin is unavailable in Editor: " + e);
             }
             catch (Exception e)
             {

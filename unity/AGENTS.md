@@ -6,6 +6,7 @@ This is a Unity quickstart for real-time voice conversation with an AI agent.
 
 - If you need a runnable Unity demo, use this project directly.
 - If you already have a Unity project, copy the core flow and adapt it to your own scene, UI, and lifecycle.
+- The current workspace is intended for macOS Editor play plus Android / iOS device builds.
 
 The Unity version follows the same high-level pattern as the other quickstarts:
 
@@ -55,6 +56,8 @@ Supported vendors change over time. Refer to the ShengWang Conversational AI RES
 - Main Unity entry script for the sample scene
 - Owns RTC engine and RTM client lifecycle
 - Wires Start / Mute / Stop buttons
+- Builds the responsive dashboard UI at runtime
+- Requests Android microphone permission before starting RTC
 - Generates:
   - user RTC / RTM token
   - agent token
@@ -105,3 +108,7 @@ Defaults:
 - The Agora Unity RTC and RTM plugin folders are imported manually and should not be edited unless the task is specifically about SDK integration.
 - This is a demo. Credentials are stored client-side for convenience. Production apps must move secrets and REST calls to a backend.
 - `TokenGenerator.cs` is demo-only and should not be reused in production unchanged.
+- The current project configuration is aimed at Android / iOS device testing and macOS Editor play, not desktop product builds.
+- Android export is expected to support `Export Project` for Android Studio, and iOS export is expected to build through Xcode.
+- For iOS, prefer fixing plugin metadata / Player Settings rather than adding extra sample-only export scripts.
+- After iOS signing or plugin import changes, regenerate the exported Xcode project before retesting.

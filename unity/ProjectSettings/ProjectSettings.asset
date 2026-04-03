@@ -1,19 +1,20 @@
 %YAML 1.1
-%TAG !u! tag:unity3d.com,2011:
+%TAG !u! tag:yousandi.cn,2023:
 --- !u!129 &1
 PlayerSettings:
   m_ObjectHideFlags: 0
   serializedVersion: 26
   productGUID: a97f354a4a6dc4731b3b2bf5570844ed
   AndroidProfiler: 0
+  hmiUseInternalProfiler: 0
   AndroidFilterTouchesWhenObscured: 0
   AndroidEnableSustainedPerformanceMode: 0
   defaultScreenOrientation: 4
   targetDevice: 2
   useOnDemandResources: 0
   accelerometerFrequency: 60
-  companyName: DefaultCompany
-  productName: startup
+  companyName: Shengwang
+  productName: quick start unity
   defaultCursor: {fileID: 0}
   cursorHotspot: {x: 0, y: 0}
   m_SplashScreenBackgroundColor: {r: 0.13725491, g: 0.12156863, b: 0.1254902, a: 1}
@@ -41,6 +42,8 @@ PlayerSettings:
     height: 1
   m_SplashScreenLogos: []
   m_VirtualRealitySplashScreen: {fileID: 0}
+  expectedBundleIdentifier: com.DefaultCompany.startup
+  integrityHash: 
   m_HolographicTrackingLossScreen: {fileID: 0}
   defaultScreenWidth: 1920
   defaultScreenHeight: 1080
@@ -69,6 +72,8 @@ PlayerSettings:
   androidStartInFullscreen: 1
   androidRenderOutsideSafeArea: 1
   androidUseSwappy: 1
+  androidDisableUnityAndroidVSync: 0
+  useSRGBBackBuffer: 1
   androidBlitType: 0
   androidResizableWindow: 0
   androidDefaultWindowWidth: 1920
@@ -77,6 +82,9 @@ PlayerSettings:
   androidMinimumWindowHeight: 300
   androidFullscreenMode: 1
   androidAutoRotationBehavior: 1
+  androidUrasMode: 0
+  disableBluetoothAudioUpdate: 0
+  androidEnableSensors: 0
   androidPredictiveBackSupport: 1
   defaultIsNativeResolution: 1
   macRetinaSupport: 1
@@ -90,14 +98,24 @@ PlayerSettings:
   hideHomeButton: 0
   submitAnalytics: 1
   usePlayerLog: 1
+  autoStreaming: 0
+  useFontStreaming: 0
+  cacheASTextureAB: 0
+  maxCacheSize: 0
+  maxConcurrentLoad: 0
+  autoStreamingId: 
+  instantGameAppId: 
   dedicatedServerOptimizations: 0
   bakeCollisionMeshes: 0
   forceSingleInstance: 0
   useFlipModelSwapchain: 1
   resizableWindow: 0
   useMacAppStoreValidation: 0
+  wglDisableFBODepthStencil: 0
   macAppStoreCategory: public.app-category.games
   gpuSkinning: 0
+  gpuSkinningTransformFeedback: 0
+  vertexShaderSkinning: 0
   xboxPIXTextureCapture: 0
   xboxEnableAvatar: 0
   xboxEnableKinect: 0
@@ -131,6 +149,17 @@ PlayerSettings:
   switchNVNMaxPublicSamplerIDCount: 0
   switchNVNGraphicsFirmwareMemory: 32
   switchMaxWorkerMultiple: 8
+  openHarmonyStartInFullscreen: 1
+  openHarmonyRenderOutsideSafeArea: 1
+  openHarmonyResizableWindow: 0
+  openHarmonyEnableLowLatencyAudio: 1
+  openHarmonyFullscreenMode: 1
+  openHarmonyAutoRotationBehavior: 1
+  openHarmonyBlitType: 0
+  openHarmonyDefaultWindowWidth: 1920
+  openHarmonyDefaultWindowHeight: 1080
+  openHarmonyMinimumWindowWidth: 400
+  openHarmonyMinimumWindowHeight: 300
   stadiaPresentMode: 0
   stadiaTargetFramerate: 0
   vulkanNumSwapchainBuffers: 3
@@ -163,6 +192,8 @@ PlayerSettings:
   androidSupportedAspectRatio: 1
   androidMaxAspectRatio: 2.1
   applicationIdentifier:
+    Android: cn.shengwang.convoai.quickstart.unity
+    iPhone: cn.shengwang.convoai.quickstart.unity
     Standalone: com.DefaultCompany.2DProject
   buildNumber:
     Standalone: 0
@@ -171,8 +202,8 @@ PlayerSettings:
     tvOS: 0
   overrideDefaultApplicationIdentifier: 1
   AndroidBundleVersionCode: 1
-  AndroidMinSdkVersion: 22
-  AndroidTargetSdkVersion: 0
+  AndroidMinSdkVersion: 26
+  AndroidTargetSdkVersion: 35
   AndroidPreferredInstallLocation: 1
   aotOptions: 
   stripEngineCode: 1
@@ -252,6 +283,11 @@ PlayerSettings:
   iOSAutomaticallyDetectAndAddCapabilities: 1
   appleEnableProMotion: 0
   shaderPrecisionModel: 0
+  optimizeInstantGameEnabled: 1
+  useMobileShaderForInstantGame: 1
+  limitMaxVisibleLights16: 1
+  declareTempsInMain: 1
+  declareImmCBAsConst: 1
   clonedFromGUID: 10ad67313f4034357812315f3c407484
   templatePackageId: com.unity.template.2d@7.0.4
   templateDefaultScene: Assets/Scenes/SampleScene.unity
@@ -263,8 +299,8 @@ PlayerSettings:
   useCustomGradlePropertiesTemplate: 0
   useCustomGradleSettingsTemplate: 0
   useCustomProguardFile: 0
-  AndroidTargetArchitectures: 1
-  AndroidTargetDevices: 0
+  AndroidTargetArchitectures: 3
+  AndroidTargetDevices: 1
   AndroidSplashScreenScale: 0
   androidSplashScreen: {fileID: 0}
   AndroidKeystoreName: 
@@ -389,6 +425,66 @@ PlayerSettings:
   - m_BuildTarget: Android
     m_Icons:
     - m_Textures: []
+      m_Width: 192
+      m_Height: 192
+      m_Kind: 1
+      m_SubKind: 
+    - m_Textures: []
+      m_Width: 144
+      m_Height: 144
+      m_Kind: 1
+      m_SubKind: 
+    - m_Textures: []
+      m_Width: 96
+      m_Height: 96
+      m_Kind: 1
+      m_SubKind: 
+    - m_Textures: []
+      m_Width: 72
+      m_Height: 72
+      m_Kind: 1
+      m_SubKind: 
+    - m_Textures: []
+      m_Width: 48
+      m_Height: 48
+      m_Kind: 1
+      m_SubKind: 
+    - m_Textures: []
+      m_Width: 36
+      m_Height: 36
+      m_Kind: 1
+      m_SubKind: 
+    - m_Textures: []
+      m_Width: 192
+      m_Height: 192
+      m_Kind: 0
+      m_SubKind: 
+    - m_Textures: []
+      m_Width: 144
+      m_Height: 144
+      m_Kind: 0
+      m_SubKind: 
+    - m_Textures: []
+      m_Width: 96
+      m_Height: 96
+      m_Kind: 0
+      m_SubKind: 
+    - m_Textures: []
+      m_Width: 72
+      m_Height: 72
+      m_Kind: 0
+      m_SubKind: 
+    - m_Textures: []
+      m_Width: 48
+      m_Height: 48
+      m_Kind: 0
+      m_SubKind: 
+    - m_Textures: []
+      m_Width: 36
+      m_Height: 36
+      m_Kind: 0
+      m_SubKind: 
+    - m_Textures: []
       m_Width: 432
       m_Height: 432
       m_Kind: 2
@@ -417,66 +513,6 @@ PlayerSettings:
       m_Width: 81
       m_Height: 81
       m_Kind: 2
-      m_SubKind: 
-    - m_Textures: []
-      m_Width: 192
-      m_Height: 192
-      m_Kind: 1
-      m_SubKind: 
-    - m_Textures: []
-      m_Width: 144
-      m_Height: 144
-      m_Kind: 1
-      m_SubKind: 
-    - m_Textures: []
-      m_Width: 96
-      m_Height: 96
-      m_Kind: 1
-      m_SubKind: 
-    - m_Textures: []
-      m_Width: 72
-      m_Height: 72
-      m_Kind: 1
-      m_SubKind: 
-    - m_Textures: []
-      m_Width: 48
-      m_Height: 48
-      m_Kind: 1
-      m_SubKind: 
-    - m_Textures: []
-      m_Width: 36
-      m_Height: 36
-      m_Kind: 1
-      m_SubKind: 
-    - m_Textures: []
-      m_Width: 192
-      m_Height: 192
-      m_Kind: 0
-      m_SubKind: 
-    - m_Textures: []
-      m_Width: 144
-      m_Height: 144
-      m_Kind: 0
-      m_SubKind: 
-    - m_Textures: []
-      m_Width: 96
-      m_Height: 96
-      m_Kind: 0
-      m_SubKind: 
-    - m_Textures: []
-      m_Width: 72
-      m_Height: 72
-      m_Kind: 0
-      m_SubKind: 
-    - m_Textures: []
-      m_Width: 48
-      m_Height: 48
-      m_Kind: 0
-      m_SubKind: 
-    - m_Textures: []
-      m_Width: 36
-      m_Height: 36
-      m_Kind: 0
       m_SubKind: 
   m_BuildTargetBatching: []
   m_BuildTargetShaderSettings: []
@@ -540,9 +576,9 @@ PlayerSettings:
   enableInternalProfiler: 0
   logObjCUncaughtExceptions: 1
   enableCrashReportAPI: 0
-  cameraUsageDescription: 
+  cameraUsageDescription: Camera access is used for real-time voice and video communication features.
   locationUsageDescription: 
-  microphoneUsageDescription: 
+  microphoneUsageDescription: Microphone access is used for real-time voice conversation with the AI agent.
   bluetoothUsageDescription: 
   macOSTargetOSVersion: 10.13.0
   switchNMETAOverride: 
@@ -819,8 +855,10 @@ PlayerSettings:
   useDeterministicCompilation: 1
   additionalIl2CppArgs: 
   scriptingRuntimeVersion: 1
+  monoAOTCompilation: 0
   gcIncremental: 1
   gcWBarrierValidation: 0
+  gcAlgorithm: {}
   apiCompatibilityLevelPerPlatform: {}
   m_RenderingPath: 1
   m_MobileRenderingPath: 1
@@ -895,9 +933,66 @@ PlayerSettings:
   hmiPlayerDataPath: 
   hmiForceSRGBBlit: 1
   embeddedLinuxEnableGamepadInput: 1
-  hmiLogStartupTiming: 0
+  logStartupTiming: 0
   hmiCpuConfiguration: 
+  customShaderCachePath: 
+  openHarmonySplashScreen: {fileID: 0}
+  openHarmonySplashScreenScale: 0
+  OpenHarmonyTargetArchitectures: 2
+  openHarmonyClientID: 
+  openHarmonyAppID: 
+  openHarmonyDeviceTypes: 7
+  openHarmonyAppIconTypes: 1
+  openHarmonySupportWindowModes: 1
+  OpenHarmonyBundleVersionCode: 1
+  forceOpenHarmonyInternetPermission: 0
+  forceOpenHarmonySDCardPermission: 0
+  openHarmonyUseLowAccuracyLocation: 0
+  openHarmonyPredefinedPermissions: []
+  openHarmonyUseTuanjieLogo: 1
+  openHarmonyLaunchImage: {fileID: 0}
+  openHarmonyLaunchBackgroundColor: {r: 0.13725491, g: 0.12156863, b: 0.1254902, a: 1}
+  OpenHarmonyKeystoreName: 
+  OpenHarmonyKeyaliasName: 
+  OpenHarmonyProfile: 
+  OpenHarmonyCertificate: 
+  OpenHarmonyCompatibleSdkVersion: 14
+  OpenHarmonyUseCustomKeystore: 0
+  OpenHarmonyUseCustomModuleJsonFive: 0
+  OpenHarmonyUseCustomTuanjiePlayerAbility: 0
   apiCompatibilityLevel: 6
+  weixinMiniGameMemorySize: 32
+  weixinMiniGameExceptionSupport: 1
+  weixinMiniGameExceptionOnlyEnableForUserCodes: 0
+  weixinMiniGameNameFilesAsHashes: 0
+  weixinMiniGameShowDiagnostics: 0
+  weixinMiniGameDataCaching: 1
+  weixinMiniGameDebugSymbols: 0
+  weixinMiniGameEmscriptenArgs: 
+  weixinMiniGameModulesDirectory: 
+  weixinMiniGameTemplate: APPLICATION:Default
+  weixinMiniGameAnalyzeBuildSize: 0
+  weixinMiniGameUseEmbeddedResources: 0
+  weixinMiniGameCompressionFormat: 0
+  weixinMiniGameWasmArithmeticExceptions: 0
+  weixinMiniGameLinkerTarget: 1
+  weixinMiniGameThreadsSupport: 0
+  weixinMiniGameDecompressionFallback: 0
+  weixinMiniGameInitialMemorySize: 32
+  weixinMiniGameMaximumMemorySize: 2048
+  weixinMiniGameMemoryGrowthMode: 2
+  weixinMiniGameMemoryLinearGrowthStep: 16
+  weixinMiniGameMemoryGeometricGrowthStep: 0.2
+  weixinMiniGameMemoryGeometricGrowthCap: 96
+  weixinMiniGamePowerPreference: 2
+  weixinMiniGameSIMDSupport: 0
+  weixinMiniGameUseSlimMetaFileFormat: 1
+  weixinMiniGamePhysicsEngine: 0
+  weixinMiniGameInjectStrippedMethodLogger: 0
+  weixinMiniGameEnableDotNetWasmExceptionHandling: 1
+  weixinMiniGamePreserveEventDelegate: 0
+  activeSubplatform: 0
+  serializedFileTypeTreeMemoryOptimization: 0
   activeInputHandler: 0
   windowsGamepadBackendHint: 0
   cloudProjectId: 
@@ -908,6 +1003,11 @@ PlayerSettings:
   cloudEnabled: 0
   legacyClampBlendShapeWeights: 0
   hmiLoadingImage: {fileID: 0}
+  qnxEGLPriority: 0
+  embeddedLinuxEGLPriority: 0
+  androidEGLPriority: 0
   platformRequiresReadableAssets: 0
   virtualTexturingSupportEnabled: 0
-  insecureHttpOption: 0
+  packClustersForPlayer: 0
+  insecureHttpOption: 2
+  useStringInternPool: 0
