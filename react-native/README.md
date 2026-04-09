@@ -100,8 +100,8 @@ TTS_BYTEDANCE_TOKEN=your_bytedance_access_token
 - 当前项目使用 `react-native-config` 直接读取 `.env`
 - 修改 `.env` 后，需要重新运行 App 使原生配置重新生效
 - 当前 Demo 中：
-  - `USER_ID` 固定为 `1001086`
-  - `AGENT_RTC_UID` 固定为 `1009527`
+  - `userId` 会在运行期随机生成，范围为 `100000..999999`
+  - `agentRtcUid` 会再随机生成一个不同的 6 位 UID，保证不与 `userId` 冲突
   - `channelName` 每次启动自动生成，格式为 `channel_reactnative_<6位随机数>`
 - ⚠️ **重要**：`src/api/TokenGenerator.ts` 中的 Token 生成逻辑仅用于演示和开发测试，**生产环境必须改为服务端生成**
 

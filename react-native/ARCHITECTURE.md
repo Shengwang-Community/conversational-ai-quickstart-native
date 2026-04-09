@@ -123,6 +123,8 @@ It also keeps non-UI session internals inside the store closure:
 - `authToken`
 - `dataStreamId`
 - `messageParser`
+- `userId`
+- `agentRtcUid`
 
 ## Connection Flow
 
@@ -148,8 +150,8 @@ User taps Start Agent
 Current conventions:
 
 - channel name format: `channel_reactnative_<6 digits>`
-- user RTC UID: `KeyCenter.USER_ID`
-- agent RTC UID: `KeyCenter.AGENT_RTC_UID`
+- user RTC UID: random `100000..999999`
+- agent RTC UID: another random `100000..999999` that is different from the user UID
 - start flow uses `messageTransport: 'datastream'`
 
 ## Message Flow
@@ -258,9 +260,9 @@ Current usage:
 
 | Token Request | UID | Purpose |
 |---------------|-----|---------|
-| user token | `USER_ID` | RTC join for the local user |
-| agent token | `AGENT_RTC_UID` | Agent RTC credential in `/join` |
-| REST auth token | `USER_ID` | `Authorization: agora token=<token>` header |
+| user token | runtime `userId` | RTC join for the local user |
+| agent token | runtime `agentRtcUid` | Agent RTC credential in `/join` |
+| REST auth token | runtime `userId` | `Authorization: agora token=<token>` header |
 
 All tokens use the same current channel name.
 

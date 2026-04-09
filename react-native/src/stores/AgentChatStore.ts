@@ -17,7 +17,6 @@ import {
   TranscriptType,
   TranscriptStatus,
 } from '../types';
-import { KeyCenter } from '../utils/KeyCenter';
 import { generateRandomChannelName } from '../utils/ChannelNameGenerator';
 import { TokenGenerator } from '../api/TokenGenerator';
 import { AgentStarter } from '../api/AgentStarter';
@@ -47,6 +46,23 @@ interface AgentChatStore {
   toggleMute: () => void;
 }
 
+const MIN_UID = 100000;
+const UID_RANGE = 900000;
+
+function generateRandomUid(): number {
+  return Math.floor(Math.random() * UID_RANGE) + MIN_UID;
+}
+
+function generateUniqueUid(excludeUid: number): number {
+  let uid = generateRandomUid();
+
+  while (uid === excludeUid) {
+    uid = generateRandomUid();
+  }
+
+  return uid;
+}
+
 export const useAgentChatStore = create<AgentChatStore>((set, get) => {
   // RTC 实例直接在 Store 中管理（参考 Android Kotlin 实现）
   let rtcEngine: any | null = null;
@@ -54,6 +70,8 @@ export const useAgentChatStore = create<AgentChatStore>((set, get) => {
   let channelName = '';
   let authToken: string | null = null;
   let dataStreamId = 0;
+  const userId = generateRandomUid();
+  const agentRtcUid = generateUniqueUid(userId);
   const messageParser = new MessageParser();
 
   // 设置消息解析错误回调（只输出到控制台，不显示在 UI 上）
@@ -335,7 +353,7 @@ export const useAgentChatStore = create<AgentChatStore>((set, get) => {
       try {
         agentToken = await TokenGenerator.generateUnifiedToken({
           channelName,
-          uid: KeyCenter.AGENT_RTC_UID.toString(),
+          uid: agentRtcUid.toString(),
         });
         get().addLog(`Generate agent token successfully`);
       } catch (error: any) {
@@ -347,7 +365,7 @@ export const useAgentChatStore = create<AgentChatStore>((set, get) => {
       try {
         nextAuthToken = await TokenGenerator.generateUnifiedToken({
           channelName,
-          uid: KeyCenter.USER_ID.toString(),
+          uid: userId.toString(),
         });
         get().addLog(`Generate REST auth token successfully`);
       } catch (error: any) {
@@ -359,10 +377,10 @@ export const useAgentChatStore = create<AgentChatStore>((set, get) => {
       try {
         const agentId = await AgentStarter.startAgentAsync({
           channelName,
-          agentRtcUid: KeyCenter.AGENT_RTC_UID.toString(),
+          agentRtcUid: agentRtcUid.toString(),
           agentToken,
           authToken: nextAuthToken,
-          remoteRtcUid: KeyCenter.USER_ID.toString(),
+          remoteRtcUid: userId.toString(),
           messageTransport: 'datastream',
         });
 
@@ -574,7 +592,7 @@ export const useAgentChatStore = create<AgentChatStore>((set, get) => {
         try {
           userToken = await TokenGenerator.generateUnifiedToken({
             channelName,
-            uid: KeyCenter.USER_ID,
+            uid: userId,
           });
           get().addLog(`Generate user token successfully`);
         } catch (error: any) {
@@ -582,6 +600,10 @@ export const useAgentChatStore = create<AgentChatStore>((set, get) => {
           get().addLog(`Generate user token failed: ${errorMessage}`);
           throw error;
         }
+
+        get().addLog(
+          `Using RTC UIDs user=${userId}, agent=${agentRtcUid}`,
+        );
 
         // 步骤 3: 加入 RTC 频道
         rtcJoined = false;
@@ -598,7 +620,7 @@ export const useAgentChatStore = create<AgentChatStore>((set, get) => {
           await rtcEngine.joinChannel(
             userToken,
             channelName,
-            KeyCenter.USER_ID,
+            userId,
             channelOptions
           );
         } catch (error: any) {

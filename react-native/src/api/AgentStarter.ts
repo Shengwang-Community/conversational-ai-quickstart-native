@@ -2,7 +2,7 @@ import { KeyCenter } from '../utils/KeyCenter';
 
 interface StartAgentRequest {
   channelName: string;
-  agentRtcUid?: string;
+  agentRtcUid: string;
   agentToken: string;
   authToken: string;
   remoteRtcUid: string;
@@ -18,7 +18,6 @@ export class AgentStarter {
     'application/json; charset=utf-8';
   private static readonly API_BASE_URL =
     'https://api.sd-rtn.com/cn/api/conversational-ai-agent/v2/projects';
-  private static readonly DEFAULT_AGENT_RTC_UID = '1009527';
   private static readonly DEFAULT_MESSAGE_TRANSPORT = 'datastream';
   private static readonly DEFAULT_TTS_CLUSTER = 'volcano_tts';
   private static readonly DEFAULT_TTS_VOICE_TYPE = 'BV700_streaming';
@@ -214,7 +213,7 @@ export class AgentStarter {
     const url = `${this.API_BASE_URL}/${projectId}/join`;
     const requestBody = this.buildJsonPayload({
       channelName: request.channelName,
-      agentRtcUid: request.agentRtcUid || this.DEFAULT_AGENT_RTC_UID,
+      agentRtcUid: request.agentRtcUid,
       agentToken: request.agentToken,
       remoteRtcUid: request.remoteRtcUid,
       messageTransport:

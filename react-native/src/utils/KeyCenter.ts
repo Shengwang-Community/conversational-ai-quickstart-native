@@ -56,7 +56,4 @@ export class KeyCenter {
   static get TTS_BYTEDANCE_TOKEN(): string {
     return this.getConfigValue(['TTS_BYTEDANCE_TOKEN']);
   }
-
-  static readonly USER_ID = 1001086;
-  static readonly AGENT_RTC_UID = 1009527;
 }

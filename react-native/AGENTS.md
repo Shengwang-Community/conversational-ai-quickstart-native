@@ -151,9 +151,6 @@ messageId|partIndex|totalParts|base64Content
   - `LLM_MODEL`
   - `TTS_BYTEDANCE_APP_ID`
   - `TTS_BYTEDANCE_TOKEN`
-- Also exposes fixed demo IDs:
-  - `USER_ID`
-  - `AGENT_RTC_UID`
 
 ## Configuration
 
