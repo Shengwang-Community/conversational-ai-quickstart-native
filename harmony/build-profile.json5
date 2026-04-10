@@ -1,0 +1,56 @@
+{
+  "app": {
+    "signingConfigs": [
+      {
+        "name": "default",
+        "type": "HarmonyOS",
+        "material": {
+          "certpath": "/Users/zhangwei/.ohos/config/default_harmony_EVFT0h0pg5x0lF6nov6jA4L5F3MdstYBAeSOi8aZ4Ow=.cer",
+          "keyAlias": "debugKey",
+          "keyPassword": "0000001BFE2062A9C5A6760E4B2C361FE8E6EA279A77169825AE626735247438E18E54BEC3941F428BC124",
+          "profile": "/Users/zhangwei/.ohos/config/default_harmony_EVFT0h0pg5x0lF6nov6jA4L5F3MdstYBAeSOi8aZ4Ow=.p7b",
+          "signAlg": "SHA256withECDSA",
+          "storeFile": "/Users/zhangwei/.ohos/config/default_harmony_EVFT0h0pg5x0lF6nov6jA4L5F3MdstYBAeSOi8aZ4Ow=.p12",
+          "storePassword": "0000001B52F0DB6FA34FB26DBCB5A50C8E703DCF50E53D6BBD293CE2376D34D6848CCE99D03B2CE92FD20B"
+        }
+      }
+    ],
+    "products": [
+      {
+        "name": "default",
+        "signingConfig": "default",
+        "targetSdkVersion": "6.0.2(22)",
+        "compatibleSdkVersion": "5.0.5(17)",
+        "runtimeOS": "HarmonyOS",
+        "buildOption": {
+          "strictMode": {
+            "caseSensitiveCheck": true,
+            "useNormalizedOHMUrl": true
+          }
+        }
+      }
+    ],
+    "buildModeSet": [
+      {
+        "name": "debug",
+      },
+      {
+        "name": "release"
+      }
+    ]
+  },
+  "modules": [
+    {
+      "name": "entry",
+      "srcPath": "./entry",
+      "targets": [
+        {
+          "name": "default",
+          "applyToProducts": [
+            "default"
+          ]
+        }
+      ]
+    }
+  ]
+}

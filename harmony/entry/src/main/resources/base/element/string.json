@@ -1,0 +1,24 @@
+{
+  "string": [
+    {
+      "name": "module_desc",
+      "value": "Conversational AI Quickstart Harmony entry module"
+    },
+    {
+      "name": "EntryAbility_desc",
+      "value": "Shengwang Conversational AI entry ability"
+    },
+    {
+      "name": "EntryAbility_label",
+      "value": "Shengwang Conversational AI"
+    },
+    {
+      "name": "internet_permission_reason",
+      "value": "Network access is required to generate demo tokens and call the Conversational AI REST API."
+    },
+    {
+      "name": "microphone_permission_reason",
+      "value": "Microphone access is required to start a real-time voice conversation with the AI agent."
+    }
+  ]
+}

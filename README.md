@@ -22,6 +22,7 @@ Minimal, multi-platform quickstart for building a Conversational AI app with Ago
 | [`windows-cpp/`](./windows-cpp/README.md) | Windows | C++ | [View docs →](./windows-cpp/README.md) |
 | [`flutter/`](./flutter/README.md) | Android / iOS | Dart + Flutter | [View docs →](./flutter/README.md) |
 | [`react-native/`](./react-native/README.md) | Android / iOS | TypeScript + React Native | [View docs →](./react-native/README.md) |
+| [`harmony/`](./harmony/README.md) | HarmonyOS | ArkTS | [View docs →](./harmony/README.md) |
 | [`unity/`](./unity/README.md) | Unity | C# + Unity | [View docs →](./unity/README.md) |
 
 ### Getting Started
@@ -52,6 +53,7 @@ See [LICENSE](./LICENSE).
 | [`windows-cpp/`](./windows-cpp/README.md) | Windows | C++ | [查看文档 →](./windows-cpp/README.md) |
 | [`flutter/`](./flutter/README.md) | Android / iOS | Dart + Flutter | [查看文档 →](./flutter/README.md) |
 | [`react-native/`](./react-native/README.md) | Android / iOS | TypeScript + React Native | [查看文档 →](./react-native/README.md) |
+| [`harmony/`](./harmony/README.md) | HarmonyOS | ArkTS | [查看文档 →](./harmony/README.md) |
 | [`unity/`](./unity/README.md) | Unity | C# + Unity | [查看文档 →](./unity/README.md) |
 
 ### 快速开始
