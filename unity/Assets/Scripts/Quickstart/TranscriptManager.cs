@@ -86,11 +86,9 @@ namespace Quickstart
                     return null;
                 }
 
-                var id = payload.turn_id > 0
-                    ? payload.turn_id.ToString()
-                    : !string.IsNullOrEmpty(payload.message_id)
-                        ? payload.message_id
-                        : DateTimeOffset.UtcNow.ToUnixTimeMilliseconds().ToString();
+                if (payload.turn_id <= 0) return null;
+
+                var id = payload.turn_id.ToString();
 
                 var text = string.IsNullOrEmpty(payload.text) ? "(empty)" : payload.text;
                 var statusCode = AsInt(payload.turn_status);

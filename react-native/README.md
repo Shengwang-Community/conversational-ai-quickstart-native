@@ -32,6 +32,7 @@
 ### 前置条件
 
 - 已安装 React Native 开发环境，推荐 Node.js 22.11+
+- 已安装 Bundler，建议通过 `bundle install` 管理 CocoaPods 依赖
 - 已具备 Android 或 iOS 真机 / 模拟器运行环境
 - 声网开发者账号：[Console](https://console.shengwang.cn/)
 - 已创建声网项目并获取 `App ID` 与 `App Certificate`
@@ -56,7 +57,12 @@ cd conversational-ai-quickstart-native/react-native
 
 ```bash
 npm install
+bundle install
 ```
+
+说明：
+
+- 如本机还没有 `bundle`，可先执行 `gem install bundler`
 
 3. **配置 React Native 项目**：
 
@@ -109,9 +115,13 @@ TTS_BYTEDANCE_TOKEN=your_bytedance_access_token
 
 ```bash
 cd ios
-pod update
+bundle exec pod install
 cd ..
 ```
+
+说明：
+
+- 建议优先使用 `bundle exec pod install`，避免全局 `pod` 与项目内 Gem 版本不一致
 
 5. **运行项目**：
 
@@ -134,6 +144,12 @@ npm start
 ```
 
 但当前工程默认运行方式不依赖 Metro；Metro 仅作为 React Native 构建 bundle 时使用的打包工具保留。
+
+如果 Android 构建在 codegen 阶段提示 `A problem occurred starting process 'command 'node''`，可优先检查：
+
+- 当前终端里 `node -v` 和 `which node` 是否正常
+- 是否需要显式设置 `NODE_BINARY=$(which node)`
+- 是否需要在未提交的 `android/local.properties` 中补一行 `nodeBinary=/absolute/path/to/node`
 
 ### 平台支持
 

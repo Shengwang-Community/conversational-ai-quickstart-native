@@ -50,11 +50,9 @@ class TranscriptManager {
       } else {
         return null;
       }
-      final idAny =
-          obj['turn_id'] ??
-          obj['message_id'] ??
-          DateTime.now().microsecondsSinceEpoch;
-      final id = idAny.toString();
+      final int? turnId = _asInt(obj['turn_id']);
+      if (turnId == null || turnId <= 0) return null;
+      final String id = turnId.toString();
       final text = (obj['text'] ?? '').toString();
       final statusCode = _asInt(obj['turn_status']);
       TranscriptStatus status;

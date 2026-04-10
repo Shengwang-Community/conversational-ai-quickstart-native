@@ -74,7 +74,10 @@ class AgentEventParser {
       return null;
     }
 
-    final int turnId = int.tryParse(stateMap['turn_id'] ?? '') ?? 0;
+    final int? turnId = int.tryParse(stateMap['turn_id'] ?? '');
+    if (turnId == null || turnId <= 0) {
+      return null;
+    }
     final int timestamp = event.timestamp ?? 0;
     if (turnId < lastTurnId) {
       return null;

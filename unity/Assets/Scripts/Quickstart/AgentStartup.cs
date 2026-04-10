@@ -69,7 +69,8 @@ namespace Quickstart
             if (StartButton != null) 
             { 
                 StartButton.onClick.AddListener(OnStart);
-                SetButtonText(StartButton, "Start Agent");
+                SetButtonText(StartButton, "Preparing...");
+                StartButton.interactable = false;
             }
             if (MuteButton != null) 
             { 
@@ -87,13 +88,127 @@ namespace Quickstart
             RefreshTranscripts();
             UpdateAgentStateUi();
             UpdateSessionMeta();
+            AppendLog("Preparing realtime clients...");
+            Debug.Log("AgentStartup Awake: preparing realtime clients");
             RefreshActionLayout();
+        }
+
+        private IEnumerator Start()
+        {
+            // Wait one frame so Play Mode can enter cleanly before touching native SDKs.
+            yield return null;
+            Debug.Log("AgentStartup Start: warmup begin");
+
+            if (TryInitializeRealtimeClients())
+            {
+                AppendLog("RTC / RTM ready");
+                Debug.Log("AgentStartup Start: RTC / RTM ready");
+            }
+            else
+            {
+                AppendLog("RTC / RTM warmup failed. Start Agent will retry initialization.");
+                Debug.LogWarning("AgentStartup Start: RTC / RTM warmup failed");
+            }
+
+            if (StartButton != null)
+            {
+                SetButtonText(StartButton, "Start Agent");
+                StartButton.interactable = true;
+            }
         }
 
         private void SetButtonText(Button btn, string text)
         {
             var txt = btn.GetComponentInChildren<Text>(true);
             if (txt != null) txt.text = text;
+        }
+
+        private bool TryInitializeRealtimeClients()
+        {
+            if (!TryInitializeRtcEngine())
+            {
+                return false;
+            }
+
+            if (TryInitializeRtmClient())
+            {
+                return true;
+            }
+
+            ReleaseRealtimeClients();
+            return false;
+        }
+
+        private bool TryInitializeRtcEngine()
+        {
+            if (_rtc != null)
+            {
+                return true;
+            }
+
+            try
+            {
+                _rtc = Agora.Rtc.RtcEngine.CreateAgoraRtcEngine();
+            }
+            catch (DllNotFoundException e)
+            {
+                AppendLog("RtcEngine 初始化失败: " + e.Message);
+                Debug.LogError("Agora RTC native plugin is unavailable in Editor: " + e);
+                return false;
+            }
+
+            var ctx = new RtcEngineContext();
+            ctx.appId = EnvConfig.AppId;
+            ctx.channelProfile = CHANNEL_PROFILE_TYPE.CHANNEL_PROFILE_LIVE_BROADCASTING;
+            ctx.audioScenario = AUDIO_SCENARIO_TYPE.AUDIO_SCENARIO_AI_CLIENT;
+            _rtc.Initialize(ctx);
+            _rtc.InitEventHandler(new RtcHandler(this));
+            _rtc.SetChannelProfile(CHANNEL_PROFILE_TYPE.CHANNEL_PROFILE_LIVE_BROADCASTING);
+            _rtc.SetClientRole(CLIENT_ROLE_TYPE.CLIENT_ROLE_BROADCASTER);
+            ApplyRtcAudioBestPractices();
+            AppendLog("RtcEngine 初始化成功");
+            Debug.Log("RtcEngine 初始化成功");
+            return true;
+        }
+
+        private bool TryInitializeRtmClient()
+        {
+            if (_rtm != null)
+            {
+                return true;
+            }
+
+            try
+            {
+                var cfg = new RtmConfig { appId = EnvConfig.AppId, userId = UserUid.ToString(), presenceTimeout = 30, useStringUserId = false };
+                _rtm = RtmClient.CreateAgoraRtmClient(cfg);
+                _rtm.OnMessageEvent += OnRtmMessageEvent;
+                _rtm.OnPresenceEvent += OnRtmPresenceEvent;
+                _rtm.OnConnectionStateChanged += (channel, state, reason) => AppendLog($"RTM {state} -> {reason}");
+                AppendLog("RtmClient 初始化成功");
+                Debug.Log("RtmClient 初始化成功");
+                return true;
+            }
+            catch (DllNotFoundException e)
+            {
+                AppendLog("RtmClient 初始化失败: " + e.Message);
+                Debug.LogError("Agora RTM native plugin is unavailable in Editor: " + e);
+                return false;
+            }
+            catch (Exception e)
+            {
+                AppendLog("RtmClient 初始化失败: " + e.Message);
+                Debug.LogError("RtmClient 初始化失败: " + e.Message);
+                return false;
+            }
+        }
+
+        private void ReleaseRealtimeClients()
+        {
+            _rtc?.LeaveChannel();
+            _rtc?.Dispose();
+            _rtc = null;
+            _rtm = null;
         }
 
         private void Update()
@@ -924,29 +1039,11 @@ namespace Quickstart
                 (err) => { AppendLog("获取 Token 失败: " + err); Debug.LogError("获取 Token 失败: " + err); });
             if (string.IsNullOrEmpty(userToken)) { StartButton.interactable = true; yield break; }
 
-            try
+            if (!TryInitializeRealtimeClients())
             {
-                _rtc = Agora.Rtc.RtcEngine.CreateAgoraRtcEngine();
-            }
-            catch (DllNotFoundException e)
-            {
-                AppendLog("RtcEngine 初始化失败: " + e.Message);
-                Debug.LogError("Agora RTC native plugin is unavailable in Editor: " + e);
                 if (StartButton != null) StartButton.interactable = true;
                 yield break;
             }
-
-            var ctx = new RtcEngineContext();
-            ctx.appId = EnvConfig.AppId;
-            ctx.channelProfile = CHANNEL_PROFILE_TYPE.CHANNEL_PROFILE_LIVE_BROADCASTING;
-            ctx.audioScenario = AUDIO_SCENARIO_TYPE.AUDIO_SCENARIO_AI_CLIENT;
-            _rtc.Initialize(ctx);
-            AppendLog("RtcEngine 初始化成功");
-            Debug.Log("RtcEngine 初始化成功");
-            _rtc.InitEventHandler(new RtcHandler(this));
-            _rtc.SetChannelProfile(CHANNEL_PROFILE_TYPE.CHANNEL_PROFILE_LIVE_BROADCASTING);
-            _rtc.SetClientRole(CLIENT_ROLE_TYPE.CLIENT_ROLE_BROADCASTER);
-            ApplyRtcAudioBestPractices();
             _rtc.JoinChannel(userToken, _channelName, "", (uint)UserUid);
             var pubOpts = new ChannelMediaOptions();
             pubOpts.publishMicrophoneTrack.SetValue(true);
@@ -959,30 +1056,6 @@ namespace Quickstart
             AppendLog("已自动开麦");
             Debug.Log("已自动开麦");
             UpdateSessionMeta();
-
-            var rtmInitOk = false;
-            try
-            {
-                var cfg = new RtmConfig { appId = EnvConfig.AppId, userId = UserUid.ToString(), presenceTimeout = 30, useStringUserId = false };
-                _rtm = RtmClient.CreateAgoraRtmClient(cfg);
-                _rtm.OnMessageEvent += OnRtmMessageEvent;
-                _rtm.OnPresenceEvent += OnRtmPresenceEvent;
-                _rtm.OnConnectionStateChanged += (channel, state, reason) => AppendLog($"RTM {state} -> {reason}");
-                rtmInitOk = true;
-                AppendLog("RtmClient 初始化成功");
-                Debug.Log("RtmClient 初始化成功");
-            }
-            catch (DllNotFoundException e)
-            {
-                AppendLog("RtmClient 初始化失败: " + e.Message);
-                Debug.LogError("Agora RTM native plugin is unavailable in Editor: " + e);
-            }
-            catch (Exception e)
-            {
-                AppendLog("RtmClient 初始化失败: " + e.Message);
-                Debug.LogError("RtmClient 初始化失败: " + e.Message);
-            }
-            if (!rtmInitOk) { StartButton.interactable = true; yield break; }
 
             AppendLog("rtmLogin 调用");
             Debug.Log("rtmLogin 调用");
@@ -1068,15 +1141,18 @@ namespace Quickstart
 
         private void OnStop()
         {
-            StartCoroutine(StopFlow());
+            StartCoroutine(StopFlow(false));
         }
 
-        private IEnumerator StopFlow()
+        private IEnumerator StopFlow(bool releaseRealtimeClients)
         {
             if (_rtm != null)
             {
-                var unsubTask = _rtm.UnsubscribeAsync(_channelName);
-                while (!unsubTask.IsCompleted) yield return null;
+                if (!string.IsNullOrEmpty(_channelName))
+                {
+                    var unsubTask = _rtm.UnsubscribeAsync(_channelName);
+                    while (!unsubTask.IsCompleted) yield return null;
+                }
                 var logoutTask = _rtm.LogoutAsync();
                 while (!logoutTask.IsCompleted) yield return null;
                 Debug.Log("RTM unsubscribed and logged out");
@@ -1091,11 +1167,15 @@ namespace Quickstart
                 );
                 _agentId = string.Empty;
             }
-            _rtc?.LeaveChannel();
-            _rtc?.Dispose();
-            Debug.Log("RTC left and disposed");
-            _rtc = null;
-            _rtm = null;
+            if (releaseRealtimeClients)
+            {
+                ReleaseRealtimeClients();
+                Debug.Log("RTC left and disposed");
+            }
+            else
+            {
+                _rtc?.LeaveChannel();
+            }
             _authToken = string.Empty;
             _channelName = string.Empty;
             _muted = false;
@@ -1118,7 +1198,7 @@ namespace Quickstart
             // Editor 停止运行时清理资源
             if (_rtc != null || _rtm != null || !string.IsNullOrEmpty(_agentId))
             {
-                StartCoroutine(StopFlow());
+                StartCoroutine(StopFlow(true));
             }
         }
 
@@ -1131,10 +1211,7 @@ namespace Quickstart
                 // 同步停止 agent（协程在退出时不可靠）
                 StartCoroutine(AgentStarter.StopAgent(_agentId, _authToken, () => {}, (err) => {}));
             }
-            _rtc?.LeaveChannel();
-            _rtc?.Dispose();
-            _rtc = null;
-            _rtm = null;
+            ReleaseRealtimeClients();
             _authToken = string.Empty;
         }
 

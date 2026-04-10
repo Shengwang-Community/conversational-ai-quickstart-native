@@ -150,6 +150,7 @@ namespace Quickstart
             {
                 int.TryParse(turnIdValue, out turnId);
             }
+            if (turnId <= 0) return null;
 
             if (turnId < lastTurnId) return null;
             if (turnId == lastTurnId && state == (lastState ?? string.Empty).Trim().ToLowerInvariant()) return null;
@@ -169,6 +170,7 @@ namespace Quickstart
                 var payload = JsonUtility.FromJson<MessageInterruptPayload>(rawMessage);
                 if (payload == null) return null;
                 if ((payload.@object ?? string.Empty) != "message.interrupt") return null;
+                if (payload.turn_id <= 0) return null;
 
                 return new AgentInterrupt
                 {

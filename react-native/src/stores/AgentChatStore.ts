@@ -18,6 +18,7 @@ import {
   TranscriptStatus,
 } from '../types';
 import { generateRandomChannelName } from '../utils/ChannelNameGenerator';
+import { KeyCenter } from '../utils/KeyCenter';
 import { TokenGenerator } from '../api/TokenGenerator';
 import { AgentStarter } from '../api/AgentStarter';
 import { MessageParser } from '../utils/MessageParser';
@@ -107,15 +108,6 @@ export const useAgentChatStore = create<AgentChatStore>((set, get) => {
     );
   };
 
-  const ensureRtcCallSucceeded = (
-    methodName: string,
-    result: unknown,
-  ): void => {
-    if (typeof result === 'number' && result < 0) {
-      throw new Error(`${methodName} failed: ${result}`);
-    }
-  };
-
   const isHeadsetStyleRoute = (routing: number): boolean => {
     return (
       routing === AudioRoute.RouteHeadset ||
@@ -161,39 +153,15 @@ export const useAgentChatStore = create<AgentChatStore>((set, get) => {
       return;
     }
 
-    ensureRtcCallSucceeded(
-      'setParameters che.audio.aec.split_srate_for_48k',
-      rtcEngine.setParameters('{"che.audio.aec.split_srate_for_48k":16000}'),
-    );
-    ensureRtcCallSucceeded(
-      'setParameters che.audio.sf.enabled',
-      rtcEngine.setParameters('{"che.audio.sf.enabled":true}'),
-    );
-    ensureRtcCallSucceeded(
-      'setParameters che.audio.sf.stftType',
-      rtcEngine.setParameters('{"che.audio.sf.stftType":6}'),
-    );
-    ensureRtcCallSucceeded(
-      'setParameters che.audio.sf.ainlpLowLatencyFlag',
-      rtcEngine.setParameters('{"che.audio.sf.ainlpLowLatencyFlag":1}'),
-    );
-    ensureRtcCallSucceeded(
-      'setParameters che.audio.sf.ainsLowLatencyFlag',
-      rtcEngine.setParameters('{"che.audio.sf.ainsLowLatencyFlag":1}'),
-    );
-    ensureRtcCallSucceeded(
-      'setParameters che.audio.sf.procChainMode',
-      rtcEngine.setParameters('{"che.audio.sf.procChainMode":1}'),
-    );
-    ensureRtcCallSucceeded(
-      'setParameters che.audio.sf.nlpDynamicMode',
-      rtcEngine.setParameters('{"che.audio.sf.nlpDynamicMode":1}'),
-    );
-    ensureRtcCallSucceeded(
-      'setParameters che.audio.sf.nlpAlgRoute',
-      rtcEngine.setParameters(
+    rtcEngine.setParameters('{"che.audio.aec.split_srate_for_48k":16000}'),
+    rtcEngine.setParameters('{"che.audio.sf.enabled":true}'),
+    rtcEngine.setParameters('{"che.audio.sf.stftType":6}'),
+    rtcEngine.setParameters('{"che.audio.sf.ainlpLowLatencyFlag":1}'),
+    rtcEngine.setParameters('{"che.audio.sf.ainsLowLatencyFlag":1}'),
+    rtcEngine.setParameters('{"che.audio.sf.procChainMode":1}'),
+    rtcEngine.setParameters('{"che.audio.sf.nlpDynamicMode":1}'),
+    rtcEngine.setParameters(
         `{"che.audio.sf.nlpAlgRoute":${isHeadsetStyleRoute(routing) ? 0 : 1}}`,
-      ),
     );
   };
 
@@ -202,11 +170,8 @@ export const useAgentChatStore = create<AgentChatStore>((set, get) => {
       return;
     }
 
-    ensureRtcCallSucceeded('enableAudio', rtcEngine.enableAudio());
-    ensureRtcCallSucceeded(
-      'setAudioScenario',
-      rtcEngine.setAudioScenario(AudioScenarioType.AudioScenarioAiClient),
-    );
+    rtcEngine.enableAudio();
+    rtcEngine.setAudioScenario(AudioScenarioType.AudioScenarioAiClient);
     await applyRtcAudioRouteParameters(AudioRoute.RouteSpeakerphone);
   };
 
@@ -244,9 +209,21 @@ export const useAgentChatStore = create<AgentChatStore>((set, get) => {
       if (messageType === 'assistant.transcription') {
         // Agent 转录消息
         const text = (message['text'] as string) || '';
-        const turnId = (message['turn_id'] as number) ?? 0;
+        const turnId = asInt(message['turn_id']);
         const userId = (message['user_id'] as string) || '';
-        const turnStatusInt = (message['turn_status'] as number) ?? 0;
+        const turnStatusInt = asInt(message['turn_status']);
+        if (turnId === null || turnId <= 0) {
+          console.log(
+            `[handleParsedMessage] assistant.transcription: missing or invalid turn_id`,
+          );
+          return;
+        }
+        if (turnStatusInt === null) {
+          console.log(
+            `[handleParsedMessage] assistant.transcription: missing or invalid turn_status`,
+          );
+          return;
+        }
         // 0: in-progress, 1: end gracefully, 2: interrupted
         let status: TranscriptStatus;
         switch (turnStatusInt) {
@@ -287,10 +264,16 @@ export const useAgentChatStore = create<AgentChatStore>((set, get) => {
       } else if (messageType === 'user.transcription') {
         // 用户转录消息
         const text = (message['text'] as string) || '';
-        const turnId = (message['turn_id'] as number) ?? 0;
+        const turnId = asInt(message['turn_id']);
         const userId = (message['user_id'] as string) || '';
         const isFinal = (message['final'] as boolean) || false;
         const status = isFinal ? TranscriptStatus.END : TranscriptStatus.IN_PROGRESS;
+        if (turnId === null || turnId <= 0) {
+          console.log(
+            `[handleParsedMessage] user.transcription: missing or invalid turn_id`,
+          );
+          return;
+        }
         
         if (text.length === 0) {
           console.log(`[handleParsedMessage] user.transcription: empty text, ignored`);
@@ -309,13 +292,26 @@ export const useAgentChatStore = create<AgentChatStore>((set, get) => {
         get().addTranscript(transcript);
       } else if (messageType === 'message.interrupt') {
         // 中断消息
-        const turnId = (message['turn_id'] as number) ?? 0;
+        const turnId = asInt(message['turn_id']);
+        if (turnId === null || turnId <= 0) {
+          console.log(
+            `[handleParsedMessage] message.interrupt: missing or invalid turn_id`,
+          );
+          return;
+        }
         console.log(`[handleParsedMessage] message.interrupt: turnId=${turnId}`);
         // TODO: 处理中断事件，更新被中断的转录状态
       } else if (messageType === 'message.state') {
         // Agent 状态更新消息
         const state = (message['state'] as string) || '';
-        console.log(`[handleParsedMessage] message.state: state=${state}`);
+        const turnId = asInt(message['turn_id']);
+        if (turnId === null || turnId <= 0) {
+          console.log(
+            `[handleParsedMessage] message.state: missing or invalid turn_id`,
+          );
+          return;
+        }
+        console.log(`[handleParsedMessage] message.state: state=${state}, turnId=${turnId}`);
         
         if (state === 'idle') {
           set({ agentState: AgentState.IDLE });
@@ -491,6 +487,11 @@ export const useAgentChatStore = create<AgentChatStore>((set, get) => {
 
     try {
       console.log(`RtcEngine initializing...`);
+      if (!KeyCenter.APP_ID) {
+        throw new Error(
+          'APP_ID is empty. Please check react-native/.env and react-native-config injection.',
+        );
+      }
       rtcEngine = createAgoraRtcEngine();
       rtcEngine.initialize({ appId: KeyCenter.APP_ID });
       rtcEngine.registerEventHandler(rtcEventHandler);

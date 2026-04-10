@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:math';
 
@@ -86,6 +87,7 @@ class _AgentChatPageState extends State<AgentChatPage> {
   String? authToken;
   RtcEngine? _rtc;
   RtmClient? _rtm;
+  Future<void>? _realtimeInitFuture;
   int _lastAgentStateTurnId = -1;
   int _lastAgentStateTimestamp = -1;
 
@@ -113,6 +115,18 @@ class _AgentChatPageState extends State<AgentChatPage> {
     return 'channel_flutter_$suffix';
   }
 
+  bool get _isMobilePlatform {
+    return !kIsWeb &&
+        (defaultTargetPlatform == TargetPlatform.android ||
+            defaultTargetPlatform == TargetPlatform.iOS);
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _primeRealtimeClients();
+  }
+
   void _safeSetState(VoidCallback fn) {
     if (!mounted) {
       return;
@@ -135,6 +149,141 @@ class _AgentChatPageState extends State<AgentChatPage> {
       if (_transcriptCtrl.hasClients) {
         _transcriptCtrl.jumpTo(_transcriptCtrl.position.maxScrollExtent);
       }
+    });
+  }
+
+  void _primeRealtimeClients() {
+    if (!_isMobilePlatform) {
+      return;
+    }
+    _realtimeInitFuture ??= _initializeRealtimeClients();
+    _realtimeInitFuture!.catchError((Object error) {
+      _realtimeInitFuture = null;
+      _safeSetState(() {
+        _addLog('页面初始化 RTC/RTM 失败: $error');
+      });
+    });
+  }
+
+  Future<void> _ensureRealtimeClientsReady() async {
+    if (!_isMobilePlatform) {
+      throw Exception('当前平台不支持 RTC/RTM 插件');
+    }
+    _primeRealtimeClients();
+    final Future<void>? initFuture = _realtimeInitFuture;
+    if (initFuture != null) {
+      await initFuture;
+    }
+    if (_rtc == null || _rtm == null) {
+      _realtimeInitFuture = _initializeRealtimeClients();
+      await _realtimeInitFuture!;
+    }
+  }
+
+  Future<void> _initializeRealtimeClients() async {
+    await _initializeRtcEngine();
+    await _initializeRtmClient();
+  }
+
+  Future<void> _initializeRtcEngine() async {
+    if (_rtc != null) {
+      return;
+    }
+
+    final RtcEngine rtc = createAgoraRtcEngine();
+    await rtc.initialize(
+      RtcEngineContext(
+        appId: KeyCenter.appId,
+        channelProfile: ChannelProfileType.channelProfileLiveBroadcasting,
+      ),
+    );
+    rtc.registerEventHandler(
+      RtcEngineEventHandler(
+        onJoinChannelSuccess: (RtcConnection connection, int elapsed) {
+          _safeSetState(() {
+            _addLog(
+              'RTC 加入成功 channelId：${connection.channelId} localUid：${connection.localUid}',
+            );
+          });
+        },
+        onError: (ErrorCodeType code, String message) {
+          _safeSetState(() {
+            connectionState = AgentConnectionState.error;
+            _addLog('RTC 错误 ${code.index}');
+          });
+        },
+        onUserJoined: (RtcConnection connection, int remoteUid, int elapsed) {
+          _safeSetState(() {
+            _addLog('RTC onUserJoined uid:$remoteUid');
+          });
+        },
+        onAudioRoutingChanged: (int routing) {
+          _handleAudioRoutingChanged(routing);
+        },
+      ),
+    );
+    _rtc = rtc;
+    try {
+      await _applyRtcAudioBestPractices();
+    } catch (_) {}
+    _safeSetState(() {
+      _addLog('RtcEngine 初始化成功');
+    });
+  }
+
+  Future<void> _initializeRtmClient() async {
+    if (_rtm != null) {
+      return;
+    }
+
+    final result = await RTM(KeyCenter.appId, userUid.toString());
+    final RtmClient rtm = result.$2;
+    rtm.addListener(
+      message: (event) {
+        final String text = utf8.decode(event.message ?? <int>[]);
+        final String readableText = AgentEventParser.formatConsoleMessage(text);
+        debugPrint('RTM 收到消息: $readableText');
+        final AgentError? agentError = AgentEventParser.parseMessageError(
+          text,
+          agentUserId: event.publisher ?? '',
+        );
+        final bool updated = transcriptMgr.upsertFromJson(text);
+        if (updated || agentError != null) {
+          _safeSetState(() {
+            if (agentError != null) {
+              _addLog(
+                'Agent error: type=${agentError.module}, code=${agentError.code}, msg=${agentError.message}',
+              );
+            }
+          });
+        }
+      },
+      linkState: (event) {
+        _safeSetState(() {
+          _addLog('RTM ${event.previousState} -> ${event.currentState}');
+        });
+      },
+      presence: (event) {
+        final AgentStateChange? stateChange =
+            AgentEventParser.parsePresenceEvent(
+          event,
+          currentChannelName: channelName,
+          lastTurnId: _lastAgentStateTurnId,
+          lastTimestamp: _lastAgentStateTimestamp,
+        );
+        if (stateChange == null) {
+          return;
+        }
+        _safeSetState(() {
+          _lastAgentStateTurnId = stateChange.turnId;
+          _lastAgentStateTimestamp = stateChange.timestamp;
+          agentStateText = stateChange.state;
+        });
+      },
+    );
+    _rtm = rtm;
+    _safeSetState(() {
+      _addLog('RtmClient 初始化成功');
     });
   }
 
@@ -238,13 +387,16 @@ class _AgentChatPageState extends State<AgentChatPage> {
     }
   }
 
-  Future<void> _cleanupLocalSession() async {
+  Future<void> _cleanupLocalSession({bool releaseRealtimeClients = false}) async {
     final RtmClient? rtm = _rtm;
     final RtcEngine? rtc = _rtc;
     final String activeChannel = channelName;
 
-    _rtm = null;
-    _rtc = null;
+    if (releaseRealtimeClients) {
+      _rtm = null;
+      _rtc = null;
+      _realtimeInitFuture = null;
+    }
 
     if (rtm != null) {
       if (activeChannel.isNotEmpty) {
@@ -275,12 +427,14 @@ class _AgentChatPageState extends State<AgentChatPage> {
         });
       }
 
-      try {
-        await rtc.release();
-      } catch (e) {
-        _safeSetState(() {
-          _addLog('RTC release 失败: $e');
-        });
+      if (releaseRealtimeClients) {
+        try {
+          await rtc.release();
+        } catch (e) {
+          _safeSetState(() {
+            _addLog('RTC release 失败: $e');
+          });
+        }
       }
     }
   }
@@ -309,11 +463,6 @@ class _AgentChatPageState extends State<AgentChatPage> {
       return;
     }
 
-    final String appId = KeyCenter.appId;
-    final bool isMobile = !kIsWeb &&
-        (defaultTargetPlatform == TargetPlatform.android ||
-            defaultTargetPlatform == TargetPlatform.iOS);
-
     _safeSetState(() {
       connectionState = AgentConnectionState.connecting;
       agentStateText = 'Idle';
@@ -323,7 +472,7 @@ class _AgentChatPageState extends State<AgentChatPage> {
     });
 
     try {
-      if (_rtc != null || _rtm != null) {
+      if (channelName.isNotEmpty) {
         _safeSetState(() {
           _addLog('检测到残留本地会话，正在清理');
         });
@@ -355,13 +504,15 @@ class _AgentChatPageState extends State<AgentChatPage> {
         transcriptMgr.items.clear();
       });
 
-      if (!isMobile) {
+      if (!_isMobilePlatform) {
         _safeSetState(() {
           connectionState = AgentConnectionState.error;
           _addLog('当前平台不支持 RTC/RTM 插件');
         });
         return;
       }
+
+      await _ensureRealtimeClientsReady();
 
       if (!mounted) {
         return;
@@ -377,45 +528,6 @@ class _AgentChatPageState extends State<AgentChatPage> {
         });
         return;
       }
-
-      _rtc = createAgoraRtcEngine();
-      await _rtc!.initialize(
-        RtcEngineContext(
-          appId: appId,
-          channelProfile: ChannelProfileType.channelProfileLiveBroadcasting,
-        ),
-      );
-      _safeSetState(() {
-        _addLog('RtcEngine 初始化成功');
-      });
-
-      _rtc!.registerEventHandler(
-        RtcEngineEventHandler(
-          onJoinChannelSuccess: (RtcConnection connection, int elapsed) {
-            _safeSetState(() {
-              _addLog('RTC 加入成功 channelId：${connection.channelId} localUid：${connection.localUid}');
-            });
-          },
-          onError: (ErrorCodeType code, String message) {
-            _safeSetState(() {
-              connectionState = AgentConnectionState.error;
-              _addLog('RTC 错误 ${code.index}');
-            });
-          },
-          onUserJoined: (RtcConnection connection, int remoteUid, int elapsed) {
-            _safeSetState(() {
-              _addLog('RTC onUserJoined uid:$remoteUid');
-            });
-          },
-          onAudioRoutingChanged: (int routing) {
-            _handleAudioRoutingChanged(routing);
-          },
-        ),
-      );
-
-      try {
-        await _applyRtcAudioBestPractices();
-      } catch (_) {}
 
       late final String userToken;
       try {
@@ -449,65 +561,6 @@ class _AgentChatPageState extends State<AgentChatPage> {
         _addLog('joinChannel 调用完成');
         _addLog('已自动开麦');
       });
-
-      try {
-        final result = await RTM(appId, userUid.toString());
-        _rtm = result.$2;
-        _safeSetState(() {
-          _addLog('RtmClient 初始化成功');
-        });
-      } catch (e) {
-        _safeSetState(() {
-          _addLog('RtmClient 初始化失败: $e');
-        });
-        rethrow;
-      }
-
-      _rtm!.addListener(
-        message: (event) {
-          final String text = utf8.decode(event.message ?? <int>[]);
-          final String readableText = AgentEventParser.formatConsoleMessage(
-            text,
-          );
-          debugPrint('RTM 收到消息: $readableText');
-          final AgentError? agentError = AgentEventParser.parseMessageError(
-            text,
-            agentUserId: event.publisher ?? '',
-          );
-          final bool updated = transcriptMgr.upsertFromJson(text);
-          if (updated || agentError != null) {
-            _safeSetState(() {
-              if (agentError != null) {
-                _addLog(
-                  'Agent error: type=${agentError.module}, code=${agentError.code}, msg=${agentError.message}',
-                );
-              }
-            });
-          }
-        },
-        linkState: (event) {
-          _safeSetState(() {
-            _addLog('RTM ${event.previousState} -> ${event.currentState}');
-          });
-        },
-        presence: (event) {
-          final AgentStateChange? stateChange =
-              AgentEventParser.parsePresenceEvent(
-            event,
-            currentChannelName: channelName,
-            lastTurnId: _lastAgentStateTurnId,
-            lastTimestamp: _lastAgentStateTimestamp,
-          );
-          if (stateChange == null) {
-            return;
-          }
-          _safeSetState(() {
-            _lastAgentStateTurnId = stateChange.turnId;
-            _lastAgentStateTimestamp = stateChange.timestamp;
-            agentStateText = stateChange.state;
-          });
-        },
-      );
 
       try {
         _safeSetState(() {
@@ -1049,6 +1102,18 @@ class _AgentChatPageState extends State<AgentChatPage> {
 
   @override
   void dispose() {
+    final RtmClient? rtm = _rtm;
+    final RtcEngine? rtc = _rtc;
+    final String activeChannel = channelName;
+    _rtm = null;
+    _rtc = null;
+    _realtimeInitFuture = null;
+    if (activeChannel.isNotEmpty) {
+      unawaited(rtm?.unsubscribe(activeChannel));
+    }
+    unawaited(rtm?.logout());
+    unawaited(rtc?.leaveChannel());
+    unawaited(rtc?.release());
     _logCtrl.dispose();
     _transcriptCtrl.dispose();
     super.dispose();
