@@ -83,89 +83,6 @@ cd conversational-ai-quickstart-native/windows-cpp
    - **API Key 等敏感信息应放在服务端**，不应暴露在客户端代码中
    - 客户端只请求自己的业务后台接口，业务后台再调用 Agora RESTful API
 
-## 测试验证
-
-### 快速体验流程
-
-1. **Agent Chat 页面**（`MainFrm`）：
-   - 在 Visual Studio 中按 `F5` 运行应用
-   - 页面布局从左到右依次为：
-     - **消息区域**：显示 USER 和 AGENT 的对话转录内容
-     - **Agent 状态**：显示在消息列表右下角，显示当前 Agent 的状态
-     - **日志区域**：右侧固定宽度区域，显示 Agent 启动相关的状态消息
-   - **控制按钮**：底部初始显示"Start Agent"按钮
-   
-2. **启动 Agent**：
-   - 点击"Start Agent"按钮
-   - 按钮禁用，应用自动：
-     - 生成随机 channelName
-     - 自动生成用户 token
-     - 加入 RTC 频道并登录 RTM
-     - 自动启动 ConvoAI 组件
-     - 自动生成 agentToken 和 authToken
-     - 自动启动 Agent
-   - Agent 启动成功后：
-     - "Start Agent"按钮隐藏
-     - 显示"Mute"和"Stop Agent"按钮
-     - 可以开始与 AI Agent 对话
-
-3. **对话交互**：
-   - 实时显示 USER 和 AGENT 的转录内容
-   - 支持静音/取消静音功能
-   - 点击"Stop Agent"按钮结束对话并断开连接
-
-### 功能验证清单
-
-- ✅ RTC 频道加入成功（查看日志区域的状态消息）
-- ✅ RTM 登录成功（查看日志区域的状态消息）
-- ✅ Agent 启动成功（按钮状态变化，显示 Mute 和 Stop Agent 按钮）
-- ✅ 音频传输正常（能够听到 AI 回复）
-- ✅ 转录功能正常（显示 USER 和 AGENT 的转录内容及状态）
-- ✅ 静音/取消静音功能正常
-- ✅ 停止功能正常（断开连接，按钮恢复为 Start Agent）
-
-## 项目结构
-
-```
-windows-cpp/
-├── VoiceAgent/
-│   ├── src/
-│   │   ├── ui/                           # 主控制器
-│   │   │   ├── MainFrm.h
-│   │   │   └── MainFrm.cpp
-│   │   ├── Chat/                         # 与 iOS 对齐的页面组件
-│   │   │   ├── ConnectionStartView.h/cpp
-│   │   │   ├── ChatSessionView.h/cpp
-│   │   │   └── AgentStateView.h/cpp
-│   │   ├── tools/                        # 与 iOS 对齐的工具层
-│   │   │   ├── NetworkManager.h/cpp             # Token 生成 + 通用 HTTP 入口
-│   │   │   ├── AgentManager.h/cpp               # Agent 启动/停止与请求体拼装
-│   │   │   ├── Logger.h/cpp
-│   │   │   └── StringUtils.h
-│   │   ├── api/                          # 内部 HTTP helper
-│   │   │   └── HttpClient.h/cpp
-│   │   ├── ConversationalAIAPI/          # 实时字幕组件
-│   │   ├── general/                      # 通用代码
-│   │   │   ├── pch.h/cpp                        # 预编译头
-│   │   │   └── VoiceAgent.h/cpp                 # 应用入口
-│   │   └── KeyCenter.h                   # 配置中心（需要创建，不提交到版本控制）
-│   ├── project/
-│   │   └── VoiceAgent.vcxproj            # Visual Studio 项目文件
-│   ├── resources/                        # 资源文件
-│   ├── rtcLib/                           # Agora RTC SDK
-│   └── rtmLib/                           # Agora RTM SDK
-├── VoiceAgent.sln                        # Visual Studio 解决方案
-├── AGENTS.md                             # Agent 指导文件
-├── ARCHITECTURE.md                       # 结构说明文件
-├── KeyCenter.h.example                   # 配置文件示例
-└── README.md                             # 本文档
-```
-
-**主要文件说明**：
-- `MainFrm.cpp`：主控制器，负责编排 `startSession -> generateUserToken -> loginRTM -> joinRTCChannel -> subscribeConvoAIMessage -> generateAgentToken -> startAgent`
-- `NetworkManager.cpp`：Token 生成与通用 HTTP 入口
-- `AgentManager.cpp`：Agent 启动/停止与请求体拼装
-
 ## 相关资源
 
 ### API 文档链接
@@ -174,14 +91,9 @@ windows-cpp/
 - [Agora RTM Windows SDK 文档](https://doc.shengwang.cn/doc/rtm2/windows/landing-page)
 - [Conversational AI RESTful API 文档](https://doc.shengwang.cn/doc/convoai/restful/landing-page)
 
-### 相关 Recipes
-
-- [Agora Recipes 主页](https://github.com/AgoraIO-Community)
-- 其他 Agora 示例项目
-
 ### 社区支持
 
 - [Agora 开发者社区](https://github.com/AgoraIO-Community)
-- [Stack Overflow](https://stackoverflow.com/questions/tagged/agora)
+- [提交工单联系声网技术支持](https://ticket.shengwang.cn/)
 
 ---

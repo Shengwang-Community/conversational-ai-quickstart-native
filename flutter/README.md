@@ -144,60 +144,6 @@ flutter create --platforms=android,ios .
 - **客户端通过后端启动 Agent**：由业务服务端拼装 `asr / llm / tts` 请求体并调用声网 RESTful API
 - **客户端只保留最薄的一层会话 UI 和 RTC/RTM 接入逻辑**
 
-## 测试验证
-
-### 快速体验流程
-
-1. **页面结构**（`AgentChatPage`）：
-
-- 运行应用后进入单页聊天界面
-- 页面从上到下依次为：
-  - 标题与副标题
-  - 日志区域
-  - 转录列表区域
-  - 底部 Agent 状态栏
-  - 启动 / 静音 / 停止控制区
-
-2. **启动 Agent**：
-
-- 点击 `Start Agent`
-- 按钮进入禁用态，文案变为 `Connecting...`
-- 应用会自动执行以下流程：
-  - 检查平台是否为 Android / iOS
-  - 请求麦克风权限
-  - 初始化 RTC Engine
-  - 生成 `userToken`
-  - 加入 RTC 频道
-  - 初始化并登录 RTM
-  - 订阅当前随机频道
-  - 生成 `agentToken` 与 `authToken`
-  - 调用 `/join` 启动 Agent
-- 如果中途失败，按钮会切换为 `Retry`
-- Agent 启动成功后：
-  - `Start Agent` 按钮隐藏
-  - 显示圆形麦克风按钮和 `Stop Agent` 按钮
-  - 默认自动开麦
-
-3. **对话交互**：
-
-- 用户消息右对齐显示，头像为 `Me`
-- Agent 消息左对齐显示，头像为 `AI`
-- 底部状态栏会随 Agent 状态变化显示 `Idle / Listening / Thinking / Speaking / Silent`
-- 点击麦克风按钮可静音 / 取消静音，本质是切换录音音量 `0 / 100`
-- 点击 `Stop Agent` 会取消 RTM 订阅、登出 RTM、停止 Agent、离开 RTC，并将页面重置回初始状态
-
-### 功能验证清单
-
-- ✅ RTC 频道加入成功
-- ✅ RTM 登录成功
-- ✅ Agent 启动成功
-- ✅ 日志区域持续输出关键步骤
-- ✅ 转录内容实时更新且同轮消息会被覆盖刷新
-- ✅ Agent 状态指示正常
-- ✅ 静音 / 取消静音功能正常
-- ✅ 停止功能正常
-- ✅ 失败后可重试
-
 ## 关键文件
 
 - `lib/main.dart`：应用入口，负责加载配置并初始化主题
@@ -209,7 +155,6 @@ flutter create --platforms=android,ios .
 - `lib/services/transcript_manager.dart`：解析转录消息并按 `turn_id` 更新列表
 - `lib/services/permission_service.dart`：麦克风权限申请与设置页引导
 - `AGENTS.md`：Flutter 版本的 AI 助手接入说明
-- `ARCHITECTURE.md`：Flutter 版本的运行结构与数据流说明
 
 ## 原生工程标识
 

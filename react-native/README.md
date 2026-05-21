@@ -193,59 +193,6 @@ npm start
 - **客户端通过后端启动 Agent**：由业务服务端拼装 `asr / llm / tts` 请求体并调用声网 RESTful API
 - **客户端只保留最薄的一层会话 UI 和 RTC/DataStream 接入逻辑**
 
-## 测试验证
-
-### 快速体验流程
-
-1. **页面结构**（`AgentChatPage`）：
-
-- 运行应用后进入单页聊天界面
-- 页面从上到下依次为：
-  - 标题与副标题
-  - 日志区域
-  - 转录列表区域
-  - 底部 Agent 状态栏
-  - 启动 / 静音 / 停止控制区
-
-2. **启动 Agent**：
-
-- 点击 `Start Agent`
-- 按钮进入连接态，文案变为 `Connecting...`
-- 应用会自动执行以下流程：
-  - 请求麦克风权限
-  - 初始化 RTC Engine
-  - 生成随机 `channelName`
-  - 生成 `userToken`
-  - 加入 RTC 频道
-  - 创建 RTC DataStream
-  - 生成 `agentToken` 与 `authToken`
-  - 调用 `/join` 启动 Agent
-- 如果启动失败，页面会进入 `Error` 状态
-- Agent 启动成功后：
-  - `Start Agent` 按钮隐藏
-  - 显示静音按钮和 `Stop Agent` 按钮
-  - 默认自动开麦
-
-3. **对话交互**：
-
-- 用户消息右对齐显示，头像为 `Me`
-- Agent 消息左对齐显示，头像为 `AI`
-- 底部状态栏会随 Agent 状态变化显示 `Idle / Listening / Thinking / Speaking / Silent`
-- 点击静音按钮可静音 / 取消静音，本质是切换录音音量 `0 / 100`
-- 点击 `Stop Agent` 会停止 Agent、离开 RTC，并将页面重置回初始状态
-
-### 功能验证清单
-
-- ✅ RTC 频道加入成功
-- ✅ RTC DataStream 创建成功
-- ✅ Agent 启动成功
-- ✅ 日志区域持续输出关键步骤
-- ✅ 转录内容实时更新且同轮消息会被覆盖刷新
-- ✅ Agent 状态指示正常
-- ✅ `message.error` 会写入日志区域
-- ✅ 静音 / 取消静音功能正常
-- ✅ 停止功能正常
-
 ## 关键文件
 
 - `App.tsx`：应用入口，负责挂载 `SafeAreaProvider`、状态栏和主页面
@@ -258,7 +205,6 @@ npm start
 - `src/utils/PermissionHelper.ts`：麦克风权限申请
 - `react-native-config.d.ts`：为 `react-native-config` 提供 TypeScript 类型声明
 - `AGENTS.md`：React Native 版本的 AI 助手接入说明
-- `ARCHITECTURE.md`：React Native 版本的运行结构与数据流说明
 
 ## 原生工程标识
 

@@ -89,67 +89,6 @@ pod install
    - **API Key 等敏感信息应放在服务端**，不应暴露在客户端代码中
    - 客户端只请求自己的业务后台接口，业务后台再调用 Agora RESTful API
 
-## 测试验证
-
-### 快速体验流程
-
-1. **配置页面**（`ViewController` 中的 `ConfigBackgroundView`）：
-   - 运行应用，进入配置页面
-   - 点击"Start"按钮（频道名称自动生成）
-   - 自动切换到聊天页面
-
-2. **聊天页面**（`ViewController` 中的 `ChatBackgroundView`）：
-   - 自动生成用户token
-   - 自动启动RTM
-   - 自动启动RTC
-   - 自动启动ConvoAI组件
-   - 自动生成agentToken
-   - 自动启动Agent
-   - 显示 Agent 状态
-   - 实时显示 USER 和 AGENT 的转录内容
-   - 可以开始与 AI Agent 对话
-   - 支持静音/取消静音功能
-   - 点击挂断按钮返回配置页面
-
-### 功能验证清单
-
-- ✅ RTC 频道加入成功（查看状态消息）
-- ✅ RTM 登录成功（查看状态消息）
-- ✅ Agent 启动成功
-- ✅ 音频传输正常（能够听到 AI 回复）
-- ✅ 转录功能正常（显示 USER 和 AGENT 的转录内容及状态）
-- ✅ 静音/取消静音功能正常
-- ✅ 挂断功能正常（返回配置页面）
-
-## 项目结构
-
-```
-ios-swift/
-├── VoiceAgent/
-│   ├── AppDelegate.swift              # 应用入口
-│   ├── SceneDelegate.swift            # Scene 代理
-│   ├── KeyCenter.swift                # 配置中心（需要填写）
-│   ├── ViewController.swift      # 主视图控制器（包含配置和聊天功能）
-│   ├── Chat/                          # 聊天相关 UI
-│   │   ├── ConfigBackgroundView.swift # 配置页面视图（频道名称输入、启动按钮）
-│   │   ├── ChatBackgroundView.swift   # 聊天页面视图（转录列表、状态、控制按钮）
-│   │   └── AgentStateView.swift       # Agent 状态视图
-│   ├── ConversationalAIAPI/           # Conversational AI API（Swift）
-│   │   ├── ConversationalAIAPI.swift
-│   │   ├── ConversationalAIAPIImpl.swift
-│   │   └── Transcript/
-│   ├── Tools/                         # 工具类
-│   │   ├── AgentManager.swift         # Agent 管理器
-│   │   └── NetworkManager.swift       # 网络管理器
-│   ├── Assets.xcassets/               # 资源文件
-│   ├── Base.lproj/                    # Storyboard 文件
-│   └── Info.plist                     # 应用配置
-├── Podfile                            # CocoaPods 依赖配置
-├── Podfile.lock                       # CocoaPods 锁定文件
-├── VoiceAgent.xcworkspace/            # Xcode 工作空间
-└── README.md                          # 本文档
-```
-
 ## 相关资源
 
 ### API 文档链接
@@ -159,14 +98,9 @@ ios-swift/
 - [Conversational AI RESTful API 文档](https://doc.shengwang.cn/doc/convoai/restful/landing-page)
 - [Conversational AI iOS 客户端组件 文档](https://doc.shengwang.cn/api-ref/convoai/ios/ios-component/overview)
 
-### 相关 Recipes
-
-- [Agora Recipes 主页](https://github.com/AgoraIO-Community)
-- 其他 Agora 示例项目
-
 ### 社区支持
 
 - [Agora 开发者社区](https://github.com/AgoraIO-Community)
-- [Stack Overflow](https://stackoverflow.com/questions/tagged/agora)
+- [提交工单联系声网技术支持](https://ticket.shengwang.cn/)
 
 ---
